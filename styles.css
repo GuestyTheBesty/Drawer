@@ -1,0 +1,28 @@
+.board {
+    border-radius: 20px;
+    border: 2px solid black;
+}
+
+.colors {
+    background-color: #555;
+    display: grid;
+    grid-template-columns: 40% auto auto auto auto auto 40%;
+    column-gap: 10px;
+    justify-items: center;
+    align-items: center;
+}
+
+.color-circle {
+    width: 20px;
+    height: 20px;
+    border-radius: 20px;
+}
+
+.black { background-color: black; }
+.red { background-color: red; }
+.green { background-color: green; }
+.blue { background-color: blue; }
+
+#color-picker {
+    transform: scale(.5);
+}

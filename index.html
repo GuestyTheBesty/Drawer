@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Drawing board</title>
+    <link rel="stylesheet" href="styles.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/vanilla-picker@2.11.1/dist/vanilla-picker.min.js"></script>
+
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
+</head>
+
+<body>
+
+    <div class="colors">
+        <div class="color-circle black"></div>
+        <div class="color-circle red"></div>
+        <div class="color-circle green" id="green"></div>
+        <div class="color-circle blue"></div>
+        <input type="color" class="color-picker">
+    </div>
+    
+    <div class="drawing">
+        <div id="color-picker"></div>
+    </div>
+
+    <script>
+        const picker = new Picker({
+            parent: document.getElementById('color-picker'),
+            popup: false,
+            color: '#000000', 
+            onDone: function(color) { console.log(color.hex); }
+        });
+    </script>
+    <script src="script.js"></script>
+</body>
+
+</html>
