@@ -18,23 +18,18 @@
 </head>
 
 <body>
+    <svg id="menu" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="32" height="32"><path d="M0 96C0 78.3 14.3 64 32 64h384c17.7 0 32 14.3 32 32s-14.3 32-32 32H32C14.3 128 0 113.7 0 96zM0 256c0-17.7 14.3-32 32-32h384c17.7 0 32 14.3 32 32s-14.3 32-32 32H32c-17.7 0-32-14.3-32-32zM448 416c0 17.7-14.3 32-32 32H32c-17.7 0-32-14.3-32-32s14.3-32 32-32h384c17.7 0 32 14.3 32 32z"/></svg>
 
-    <div class="drawer-changes">
-        <input type="range" id="size-slider" min="1" max="32" value="1">
-        <div id="selected-color"></div>
-        <div id="color-picker"></div>
+    <div id="background" hidden>
+        <div id="center">
+            <input id="size-slider" type="range" min="8" max="40" value="20">
+            <div id="selected-color"></div>
+            <div id="color-picker"></div>
+            <div class="resizer"></div>
+        </div>
+
     </div>
-
-    <div class="drawer">
-
-    </div>
-        
-        
-
-    <div class="information">
-            
-    </div>
-
+    
     <script src="script.js"></script>
 </body>
 

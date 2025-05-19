@@ -1,23 +1,31 @@
+const menu = document.getElementById('menu');
+const background = document.getElementById('background');
+const sizeSlider = document.getElementById('size-slider');
+let currentColor = `#000000ff`;
+
+// Change the color of the slider
+function changeColor(color) {
+  currentColor = color.hex;
+  sizeSlider.style.setProperty('--thumb-color', currentColor);
+}
+
+// Change the size when slid 
+sizeSlider.addEventListener('input', () => {
+  sizeSlider.style.setProperty('--thumb-size', `${sizeSlider.value}px`);
+})
+
 // For the color picker
 const picker = new Picker({
     parent: document.getElementById('color-picker'),
     popup: false,
-    color: '#000000', 
-    onDone: function(color) { console.log(color.hex); }
+    color: '#000000ff', 
+    onDone: changeColor
 });
 
-const colorsCircles = document.querySelectorAll('.color-circle');
-
-colorsCircles.forEach(color => {
-    color.addEventListener('click', () => {
-        color.style.backgroundColor = 'yellow';
-    })
+menu.addEventListener('click', () => {
+  background.hidden = false;
 });
 
-/*
-const green = document.getElementById('green');
-
-green.addEventListener('click', () => {
-    green.style.backgroundColor = 'red';
-})
-*/
+background.addEventListener('click', (e) => {
+  if (e.target === background) background.hidden = true;
+});
