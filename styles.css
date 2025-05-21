@@ -3,9 +3,8 @@
     margin: 10px;
 }
 
-#menu:hover {
-  cursor: pointer;
-}
+#menu:hover { cursor: pointer; }
+
 #background {
   position: absolute;
   top: 0;
@@ -32,7 +31,7 @@
   height: 3px;
   background: #ddd;
   border-radius: 4px;
-  margin: 20px 0;
+  margin: 30px 0;
   cursor: pointer;
 }
 
@@ -41,15 +40,15 @@
 }
 
 #size-slider::-webkit-slider-thumb {
-  width: var(--thumb-size, 20px);
-  height: var(--thumb-size, 20px);
+  width: var(--thumb-size, 8px);
+  height: var(--thumb-size, 8px);
   background: var(--thumb-color, black);
   border-radius: 50%;
 }
 
 #size-slider::-moz-range-thumb {
-  width: var(--thumb-size, 20px);
-  height: var(--thumb-size, 20px);
+  width: var(--thumb-size, 8px);
+  height: var(--thumb-size, 8px);
   background: var(--thumb-color, black);
   border-radius: 50%;
 }
@@ -62,4 +61,17 @@
     height: 100vh;
     cursor: crosshair;
     overflow: auto;
+}
+
+#tools {  margin: 10px 0 0 5px; }
+
+#paintbrush { margin: 0 10px 0 3px; }
+#paintbrush:hover { cursor: pointer; }
+
+#eraser:hover {cursor: pointer; }
+
+#current-tool {
+  background-color: #0492C2;
+  width: 30px;
+  height: 4px;
 }

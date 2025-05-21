@@ -1,47 +1,29 @@
-const menu = document.getElementById('menu');
-const background = document.getElementById('background');
-const sizeSlider = document.getElementById('size-slider');
+// -------------------------------------------------- Canvas
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext("2d");
-ctx.lineWidth = 20;
+ctx.lineWidth = 8;
 
-let width = window.innerWidth;
-let height = window.innerHeight;
-let widthRatio = 1920 / width;
-let heightRatio = 1080 / height;
+let rect = canvas.getBoundingClientRect();
+let widthRatio = 1920 / rect.width;
+let heightRatio = 1080 / rect.height;
+let lastX, lastY, drawing;
 
-window.addEventListener('resize', () => {
-    const rect = canvas.getBoundingClientRect();
-    widthRatio = 1920 / rect.width;
-    heightRatio = 1080 / rect.height;
+const getCanvasXPos = (e) => (e.clientX - rect.left) * widthRatio;
+const getCanvasYPos = (e) => (e.clientY - rect.top) * heightRatio;
 
-    console.log(window.innerWidth, window.innerHeight);
-    width = Math.max(window.innerWidth, width);
-    height = Math.max(window.innerHeight, height);
-    
-    
-    canvas.style.width = `${width}px`;
-    canvas.style.height = `${height}px`;
-});
-
-
-let drawing = false;
-let lastX = 0, lastY = 0;
-
+// Drawing starts when you hold the mouse down
 canvas.addEventListener('mousedown', (e) => {
     drawing = true;
-
-    const rect = canvas.getBoundingClientRect();
-    lastX = (e.clientX - rect.left) * widthRatio;
-    lastY = (e.clientY - rect.top) * heightRatio;
+    lastX = getCanvasXPos(e);
+    lastY = getCanvasYPos(e);
 });
 
+// When you move the mouse around and drawing is true, it starts drawing
 canvas.addEventListener('mousemove', (e) => {
     if (!drawing) return;
 
-    const rect = canvas.getBoundingClientRect();
-    const currentX = (e.clientX - rect.left) * widthRatio;
-    const currentY = (e.clientY - rect.top) * heightRatio;
+    const currentX = getCanvasXPos(e);
+    const currentY = getCanvasYPos(e);
 
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
@@ -52,25 +34,47 @@ canvas.addEventListener('mousemove', (e) => {
     lastY = currentY;
 });
 
-// Stop drawing when mouse is released or leaves the canvas
+// You're no longer drawing
 canvas.addEventListener('mouseup', () => drawing = false);
 canvas.addEventListener('mouseout', () => drawing = false);
 
+// The width and height ratios should be adjusted if there's a screen resize
+window.addEventListener('resize', () => {
+    rect = canvas.getBoundingClientRect();
+    widthRatio = 1920 / rect.width;
+    heightRatio = 1080 / rect.height;
+});
+
+
+// -------------------------------------------------- Menu/Colors
+const menu = document.getElementById('menu');
+const background = document.getElementById('background');
+const sizeSlider = document.getElementById('size-slider');
 let currentColor = `#000000ff`;
 
-// Change the color of the slider
+const flipBackground = () => background.hidden = !background.hidden;
+
+// Applies change when the user presses "Ok"
 function changeColor(color) {
     currentColor = color.hex;
     sizeSlider.style.setProperty('--thumb-color', currentColor);
+
     ctx.lineWidth = sizeSlider.value;
+    ctx.strokeStyle = currentColor;
+    console.log(currentColor);
+
     flipBackground();
 }
 
-// Change the size when slid 
+// Dynamically change the slider size as you slide the thumb circle
 sizeSlider.addEventListener('input', () => {
-  sizeSlider.style.setProperty('--thumb-size', `${sizeSlider.value}px`);
-  
-})
+    sizeSlider.style.setProperty('--thumb-size', `${sizeSlider.value}px`);
+});
+
+// Turn on the background when menu is clicked
+menu.addEventListener('click', flipBackground);
+// Turn off the background when background is clicked
+background.addEventListener('click', (e) => { if (e.target === background) flipBackground(); });
 
 // For the color picker
 const picker = new Picker({
@@ -80,12 +84,29 @@ const picker = new Picker({
     onDone: changeColor
 });
 
-const flipBackground = () => background.hidden = !background.hidden;
 
-menu.addEventListener('click', () => {
-  background.hidden = false;
+// -------------------------------------------------- Menu/Tools
+const currentTool = document.getElementById('current-tool');
+const paintbrush = document.getElementById('paintbrush');
+const eraser = document.getElementById('eraser');
+let erase = false;
+
+paintbrush.addEventListener('click', () => {
+  erase = false;
+  currentTool.style.marginLeft = '0';
+  
+  canvas.style.cursor = 'crosshair';
+
+  sizeSlider.style.setProperty('--thumb-color', currentColor);
+  ctx.strokeStyle = currentColor;
 });
 
-background.addEventListener('click', (e) => {
-  if (e.target === background) background.hidden = true;
+eraser.addEventListener('click', () => {
+  erase = true;
+  currentTool.style.marginLeft = '40px';
+
+  canvas.style.cursor = 'grabbing';
+  ctx.strokeStyle = '#ffffff';
+
+  sizeSlider.style.setProperty('--thumb-color', 'white');
 });
