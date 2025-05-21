@@ -57,11 +57,10 @@ const flipBackground = () => background.hidden = !background.hidden;
 // Applies change when the user presses "Ok"
 function changeColor(color) {
     currentColor = color.hex;
-    sizeSlider.style.setProperty('--thumb-color', currentColor);
+    if (!color) sizeSlider.style.setProperty('--thumb-color', currentColor);
 
     ctx.lineWidth = sizeSlider.value;
-    ctx.strokeStyle = currentColor;
-    console.log(currentColor);
+    if (!color) ctx.strokeStyle = currentColor;
 
     flipBackground();
 }
@@ -105,7 +104,16 @@ eraser.addEventListener('click', () => {
   erase = true;
   currentTool.style.marginLeft = '40px';
 
-  canvas.style.cursor = 'grabbing';
+  let r = sizeSlider.value;
+  const svgCursor = `
+    <svg xmlns="http://www.w3.org/2000/svg" width="${r}" height="${r}">
+      <circle cx="16" cy="16" r="12" stroke="black" stroke-width="1" fill="none"/>
+    </svg>
+  `;
+
+  // Encode SVG as Data URI
+  const svgDataUrl = `data:image/svg+xml,${encodeURIComponent(svgCursor)}`;
+  canvas.style.cursor = `url("${svgDataUrl}") ${Math.floor(r/2)} ${Math.floor(r/2)}, grabbing`;
   ctx.strokeStyle = '#ffffff';
 
   sizeSlider.style.setProperty('--thumb-color', 'white');
