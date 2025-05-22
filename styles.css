@@ -68,10 +68,20 @@
 #paintbrush { margin: 0 10px 0 3px; }
 #paintbrush:hover { cursor: pointer; }
 
+#eraser { margin-right: 10px; }
 #eraser:hover {cursor: pointer; }
+
+#trash { }
+#trash:hover { cursor: pointer; }
 
 #current-tool {
   background-color: #0492C2;
   width: 30px;
   height: 4px;
+}
+
+@keyframes shake {
+  0% { transform: rotate(30deg); }
+  50% { transform: rotate(-30deg); }
+  100% { transform: rotate(30deg); }
 }

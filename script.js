@@ -45,6 +45,8 @@ window.addEventListener('resize', () => {
     heightRatio = 1080 / rect.height;
 });
 
+let erase = false;
+
 
 // -------------------------------------------------- Menu/Colors
 const menu = document.getElementById('menu');
@@ -54,20 +56,10 @@ let currentColor = `#000000ff`;
 
 const flipBackground = () => background.hidden = !background.hidden;
 
-// Applies change when the user presses "Ok"
-function changeColor(color) {
-    currentColor = color.hex;
-    if (!color) sizeSlider.style.setProperty('--thumb-color', currentColor);
-
-    ctx.lineWidth = sizeSlider.value;
-    if (!color) ctx.strokeStyle = currentColor;
-
-    flipBackground();
-}
-
 // Dynamically change the slider size as you slide the thumb circle
 sizeSlider.addEventListener('input', () => {
     sizeSlider.style.setProperty('--thumb-size', `${sizeSlider.value}px`);
+    ctx.lineWidth = sizeSlider.value;
 });
 
 // Turn on the background when menu is clicked
@@ -75,29 +67,38 @@ menu.addEventListener('click', flipBackground);
 // Turn off the background when background is clicked
 background.addEventListener('click', (e) => { if (e.target === background) flipBackground(); });
 
+// Applies change when the user changes the color
+function changeColor(color) {
+    currentColor = color.hex;
+    if (erase) return;
+
+    sizeSlider.style.setProperty('--thumb-color', currentColor);
+    ctx.strokeStyle = currentColor;
+}
+
 // For the color picker
 const picker = new Picker({
     parent: document.getElementById('color-picker'),
     popup: false,
     color: '#000000ff', 
-    onDone: changeColor
+    onChange: changeColor
 });
+// Remove the inherit "Ok" button
+document.querySelector('.picker_done').style.display = 'none';
 
 
 // -------------------------------------------------- Menu/Tools
 const currentTool = document.getElementById('current-tool');
 const paintbrush = document.getElementById('paintbrush');
 const eraser = document.getElementById('eraser');
-let erase = false;
+const trash = document.getElementById('trash');
 
 paintbrush.addEventListener('click', () => {
   erase = false;
   currentTool.style.marginLeft = '0';
-  
   canvas.style.cursor = 'crosshair';
-
-  sizeSlider.style.setProperty('--thumb-color', currentColor);
-  ctx.strokeStyle = currentColor;
+  const color = {hex: currentColor}
+  changeColor(color);
 });
 
 eraser.addEventListener('click', () => {
@@ -115,6 +116,22 @@ eraser.addEventListener('click', () => {
   const svgDataUrl = `data:image/svg+xml,${encodeURIComponent(svgCursor)}`;
   canvas.style.cursor = `url("${svgDataUrl}") ${Math.floor(r/2)} ${Math.floor(r/2)}, grabbing`;
   ctx.strokeStyle = '#ffffff';
+});
 
-  sizeSlider.style.setProperty('--thumb-color', 'white');
+let del = false;
+trash.addEventListener('click', () => {
+    if (del) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        flipBackground();
+        return;
+    }
+
+    del = true;
+    trash.style.animation = 'shake 0.25s ease-in-out 2';
+
+    setTimeout(() => { 
+        del = false 
+        trash.style.animation = 'none';
+        trash.offsetHeight;
+    }, 500);
 });
