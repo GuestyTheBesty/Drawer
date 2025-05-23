@@ -7,131 +7,152 @@ ctx.lineJoin = 'round';
 
 const strokes = [];
 let currentStroke = []
+let curStrokeIndex = 0;
+
 let rect = canvas.getBoundingClientRect();
 let widthRatio = 1920 / rect.width;
 let heightRatio = 1080 / rect.height;
-let lastX, lastY, drawing;
+let drawing, erasing;
 
 const getCanvasXPos = (e) => (e.clientX - rect.left) * widthRatio;
 const getCanvasYPos = (e) => (e.clientY - rect.top) * heightRatio;
-
 function regenerateCanvas() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   for (let i = 0; i < strokes.length; i++) {
-    console.log(i);
-    const coords = strokes[i].coords;
-    for (let k = 0; k < coords.length - 1; k++) {
-      let x1 = coords[k].x;
-      let y1 = coords[k].y;
-      let x2 = coords[k+1].x;
-      let y2 = coords[k+1].y;
+	const coords = strokes[i].coords;
+	if (coords.length === 0) continue;
 
-      ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
-      ctx.stroke();
-    }
+	ctx.beginPath();
+	ctx.moveTo(coords[0].x, coords[0].y);
+	for (let k = 0; k < coords.length; k++)
+		ctx.lineTo(coords[k].x, coords[k].y);
+	ctx.stroke();
   }
+}
+function getDistance(x1, y1, x2, y2) {
+	// Distance formula [I actually applied math??]
+	return Math.sqrt((x2 - x1)**2 + (y2-y1)**2);
+}
+function findStroke() {
+	const strokeIndex = 0;
+
+	for (let i = strokes.length - 1; i >= 0; i--) {
+		const radius = strokes[i].lineWidth;
+		const coords = strokes[i].coords;
+		for (let k = 0; k < coords.length; k++) {
+		  const x = coords[k].x;
+		  const y = coords[k].y;
+
+			
+		  let distance = getDistance(x, y, currentX, currentY);
+
+		  if (distance <= r) {
+			strokes.splice(i, 1);
+			regenerateCanvas();
+			return;
+		  } else {
+
+		  }
+		}
+	}
+
+	return strokeIndex;
 }
 
 let eraseMode = false;
 // Drawing starts when you hold the mouse down
 canvas.addEventListener('mousedown', (e) => {
   if (erase) {
-    eraseMode = true;
-    canvas.style.cursor = 'grabbing';
+	eraseMode = true;
+	canvas.style.cursor = 'grabbing';
   } else {
-    currentStroke = {
-      lineWidth: ctx.lineWidth,
-      coords: []
-    };
-    drawing = true;
-    lastX = getCanvasXPos(e);
-    lastY = getCanvasYPos(e);
+	drawing = true;
+	const x = getCanvasXPos(e);
+	const y = getCanvasYPos(e);
+
+	ctx.beginPath();
+	ctx.moveTo(x, y);
+	ctx.lineTo(x, y);
+	ctx.stroke();
+
+	currentStroke = {
+		lineWidth: ctx.lineWidth,
+		coords: [{x, y}]
+	};
   }
-    
 });
 
 // When you move the mouse around and drawing is true, it starts drawing
 canvas.addEventListener('mousemove', (e) => {
-    if (eraseMode) {
-      const currentX = getCanvasXPos(e);
-      const currentY = getCanvasYPos(e);
+	if (eraseMode) {
+	  const currentX = getCanvasXPos(e);
+	  const currentY = getCanvasYPos(e);
 
-      // Get 1x1 pixel data
-      const pixel = ctx.getImageData(currentX, currentY, 1, 1).data;
-      const [r, g, b, a] = pixel;
+	  // Get 1x1 pixel data
+	  const pixel = ctx.getImageData(currentX, currentY, 1, 1).data;
+	  const [r, g, b, a] = pixel;
 
-      // If it's white, return
-      if (a === 0 || (r === 255 && g === 255 && b === 255)) return;
+	  // If it's white, return
+	  if (a === 0 || (r === 255 && g === 255 && b === 255)) return;
 
-      for (let i = strokes.length - 1; i >= 0; i--) {
-        const lineWidth = strokes[i].lineWidth;
-        
-        const coords = strokes[i].coords;
-        for (let k = 0; k < coords.length; k++) {
-          let x = coords[k].x;
-          let y = coords[k].y;
+	  
+		
+	  
+	} else if (drawing) {
+	  const currentX = getCanvasXPos(e);
+	  const currentY = getCanvasYPos(e);
+	  currentStroke.coords.push({
+		x: currentX,
+		y: currentY
+	  });
 
-          if (x - lineWidth <= currentX && currentX <= x + lineWidth &&
-              y - lineWidth <= currentY && currentY <= y + lineWidth) {
-            console.log(strokes);
-            console.log(i);
-            strokes.splice(i, 1);
-            console.log(strokes);
-            console.log("spliecd");
-            
-            regenerateCanvas();
-            return;
-          }
-        }
-      }
-    } else if (drawing) {
-      const currentX = getCanvasXPos(e);
-      const currentY = getCanvasYPos(e);
-      currentStroke.coords.push({
-        x: currentX,
-        y: currentY
-      });
-
-      ctx.beginPath();
-      ctx.moveTo(lastX, lastY);
-      ctx.lineTo(currentX, currentY);
-      ctx.stroke();
-
-      lastX = currentX;
-      lastY = currentY;
-    } 
+	  ctx.lineTo(currentX, currentY);
+	  ctx.stroke();
+	}
 });
 
 // You're no longer drawing
 canvas.addEventListener('mouseup', () => {
-  console.log("mouseup");
   if (eraseMode) {
-    eraseMode = false;
-    canvas.style.cursor = 'default';
+	eraseMode = false;
+	canvas.style.cursor = 'default';
   } else {
-      drawing = false;
-      strokes.push(currentStroke);
+	  drawing = false;
+	  strokes.push(currentStroke);
+	  console.log(currentStroke);
+	  ctx.strokeStyle = currentColor;
+	  
+	  console.log("bruh", currentStroke.coords.length);
+	  for (let i = 0; i < currentStroke.coords.length; i++) {
+		const point = currentStroke.coords[i];  // access each coordinate object
+	  
+		ctx.strokeStyle = "green";
+		ctx.fillStyle = 'blue';
+	  
+		ctx.beginPath();
+		ctx.arc(point.x, point.y, 10, 0, Math.PI * 2);  // use point.x and point.y
+		ctx.fill();
+	  }
+	  ctx.strokeStyle = currentColor;
+	  ctx.closePath();
   }
 });
 canvas.addEventListener('mouseout', () => {
   console.log("mouseout");
-    if (eraseMode) {
-    eraseMode = false;
-    canvas.style.cursor = 'default';
+	if (eraseMode) {
+	eraseMode = false;
+	canvas.style.cursor = 'default';
   } else {
-      drawing = false;
-      strokes.push(currentStroke);
+	  drawing = false;
+	  strokes.push(currentStroke);
   }
-
 });
 
 // The width and height ratios should be adjusted if there's a screen resize
 window.addEventListener('resize', () => {
-    rect = canvas.getBoundingClientRect();
-    widthRatio = 1920 / rect.width;
-    heightRatio = 1080 / rect.height;
+	rect = canvas.getBoundingClientRect();
+	widthRatio = 1920 / rect.width;
+	heightRatio = 1080 / rect.height;
 });
 
 let erase = false;
@@ -147,8 +168,8 @@ const flipBackground = () => background.hidden = !background.hidden;
 
 // Dynamically change the slider size as you slide the thumb circle
 sizeSlider.addEventListener('input', () => {
-    sizeSlider.style.setProperty('--thumb-size', `${sizeSlider.value}px`);
-    ctx.lineWidth = sizeSlider.value;
+	sizeSlider.style.setProperty('--thumb-size', `${sizeSlider.value}px`);
+	ctx.lineWidth = sizeSlider.value;
 });
 
 // Turn on the background when menu is clicked
@@ -158,19 +179,19 @@ background.addEventListener('click', (e) => { if (e.target === background) flipB
 
 // Applies change when the user changes the color
 function changeColor(color) {
-    currentColor = color.hex;
-    if (erase) return;
+	currentColor = color.hex;
+	if (erase) return;
 
-    sizeSlider.style.setProperty('--thumb-color', currentColor);
-    ctx.strokeStyle = currentColor;
+	sizeSlider.style.setProperty('--thumb-color', currentColor);
+	ctx.strokeStyle = currentColor;
 }
 
 // For the color picker
 const picker = new Picker({
-    parent: document.getElementById('color-picker'),
-    popup: false,
-    color: '#000000ff', 
-    onChange: changeColor
+	parent: document.getElementById('color-picker'),
+	popup: false,
+	color: '#000000ff', 
+	onChange: changeColor
 });
 // Remove the inherit "Ok" button
 document.querySelector('.picker_done').style.display = 'none';
@@ -199,19 +220,19 @@ eraser.addEventListener('click', () => {
 
 let del = false;
 trash.addEventListener('click', () => {
-    
-    if (del) {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        flipBackground();
-        return;
-    }
+	
+	if (del) {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		flipBackground();
+		return;
+	}
 
-    del = true;
-    trash.style.animation = 'shake 0.25s ease-in-out 2';
+	del = true;
+	trash.style.animation = 'shake 0.25s ease-in-out 2';
 
-    setTimeout(() => {
-        del = false 
-        trash.style.animation = 'none';
-        trash.offsetHeight;
-    }, 500);
+	setTimeout(() => {
+		del = false 
+		trash.style.animation = 'none';
+		trash.offsetHeight;
+	}, 500);
 });
