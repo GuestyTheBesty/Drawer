@@ -1,8 +1,12 @@
 // -------------------------------------------------- Canvas
 const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext("2d");
+const ctx = canvas.getContext('2d', { willReadFrequently: true });
 ctx.lineWidth = 8;
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round'; 
 
+const strokes = [];
+let currentStroke = []
 let rect = canvas.getBoundingClientRect();
 let widthRatio = 1920 / rect.width;
 let heightRatio = 1080 / rect.height;
@@ -11,8 +15,33 @@ let lastX, lastY, drawing;
 const getCanvasXPos = (e) => (e.clientX - rect.left) * widthRatio;
 const getCanvasYPos = (e) => (e.clientY - rect.top) * heightRatio;
 
+function regenerateCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (let i = 0; i < strokes.length; i++) {
+    console.log(i);
+    const coords = strokes[i].coords;
+    for (let k = 0; k < coords.length - 1; k++) {
+      let x1 = coords[k].x;
+      let y1 = coords[k].y;
+      let x2 = coords[k+1].x;
+      let y2 = coords[k+1].y;
+
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+  }
+}
+
+let eraseMode = false;
 // Drawing starts when you hold the mouse down
 canvas.addEventListener('mousedown', (e) => {
+  if (erase) eraseMode = true;
+    currentStroke = {
+      lineWidth: ctx.lineWidth,
+      coords: []
+    };
     drawing = true;
     lastX = getCanvasXPos(e);
     lastY = getCanvasYPos(e);
@@ -20,23 +49,67 @@ canvas.addEventListener('mousedown', (e) => {
 
 // When you move the mouse around and drawing is true, it starts drawing
 canvas.addEventListener('mousemove', (e) => {
-    if (!drawing) return;
+    if (eraseMode) {
+      const currentX = getCanvasXPos(e);
+      const currentY = getCanvasYPos(e);
 
-    const currentX = getCanvasXPos(e);
-    const currentY = getCanvasYPos(e);
+      // Get 1x1 pixel data
+      const pixel = ctx.getImageData(currentX, currentY, 1, 1).data;
+      const [r, g, b, a] = pixel;
 
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(currentX, currentY);
-    ctx.stroke();
+      // If it's white, return
+      if (a === 0 || (r === 255 && g === 255 && b === 255)) return;
 
-    lastX = currentX;
-    lastY = currentY;
+      for (let i = strokes.length - 1; i >= 0; i--) {
+        const lineWidth = strokes[i].lineWidth;
+        
+        const coords = strokes[i].coords;
+        for (let k = 0; k < coords.length; k++) {
+          let x = coords[k].x;
+          let y = coords[k].y;
+
+          if (x - lineWidth <= currentX && currentX <= x + lineWidth &&
+              y - lineWidth <= currentY && currentY <= y + lineWidth) {
+            console.log(strokes);
+            console.log(i);
+            strokes.splice(i, 1);
+            console.log(strokes);
+            console.log("spliecd");
+            
+            regenerateCanvas();
+            return;
+          }
+        }
+      }
+    } else if (drawing) {
+      const currentX = getCanvasXPos(e);
+      const currentY = getCanvasYPos(e);
+      currentStroke.coords.push({
+        x: currentX,
+        y: currentY
+      });
+
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(currentX, currentY);
+      ctx.stroke();
+
+      lastX = currentX;
+      lastY = currentY;
+    } 
 });
 
 // You're no longer drawing
-canvas.addEventListener('mouseup', () => drawing = false);
-canvas.addEventListener('mouseout', () => drawing = false);
+canvas.addEventListener('mouseup', () => {
+  drawing = false;
+  eraseMode = false;
+  strokes.push(currentStroke);
+  console.log(currentStroke.lineWidth, "mouseup"); 
+});
+canvas.addEventListener('mouseout', () => {
+  drawing = false;
+  eraseMode = false;
+});
 
 // The width and height ratios should be adjusted if there's a screen resize
 window.addEventListener('resize', () => {
@@ -101,25 +174,16 @@ paintbrush.addEventListener('click', () => {
   changeColor(color);
 });
 
+
 eraser.addEventListener('click', () => {
   erase = true;
   currentTool.style.marginLeft = '40px';
 
-  let r = sizeSlider.value;
-  const svgCursor = `
-    <svg xmlns="http://www.w3.org/2000/svg" width="${r}" height="${r}">
-      <circle cx="16" cy="16" r="12" stroke="black" stroke-width="1" fill="none"/>
-    </svg>
-  `;
-
-  // Encode SVG as Data URI
-  const svgDataUrl = `data:image/svg+xml,${encodeURIComponent(svgCursor)}`;
-  canvas.style.cursor = `url("${svgDataUrl}") ${Math.floor(r/2)} ${Math.floor(r/2)}, grabbing`;
-  ctx.strokeStyle = '#ffffff';
 });
 
 let del = false;
 trash.addEventListener('click', () => {
+    
     if (del) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         flipBackground();
@@ -129,7 +193,7 @@ trash.addEventListener('click', () => {
     del = true;
     trash.style.animation = 'shake 0.25s ease-in-out 2';
 
-    setTimeout(() => { 
+    setTimeout(() => {
         del = false 
         trash.style.animation = 'none';
         trash.offsetHeight;
