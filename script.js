@@ -37,7 +37,10 @@ function regenerateCanvas() {
 let eraseMode = false;
 // Drawing starts when you hold the mouse down
 canvas.addEventListener('mousedown', (e) => {
-  if (erase) eraseMode = true;
+  if (erase) {
+    eraseMode = true;
+    canvas.style.cursor = 'grabbing';
+  } else {
     currentStroke = {
       lineWidth: ctx.lineWidth,
       coords: []
@@ -45,6 +48,8 @@ canvas.addEventListener('mousedown', (e) => {
     drawing = true;
     lastX = getCanvasXPos(e);
     lastY = getCanvasYPos(e);
+  }
+    
 });
 
 // When you move the mouse around and drawing is true, it starts drawing
@@ -101,14 +106,25 @@ canvas.addEventListener('mousemove', (e) => {
 
 // You're no longer drawing
 canvas.addEventListener('mouseup', () => {
-  drawing = false;
-  eraseMode = false;
-  strokes.push(currentStroke);
-  console.log(currentStroke.lineWidth, "mouseup"); 
+  console.log("mouseup");
+  if (eraseMode) {
+    eraseMode = false;
+    canvas.style.cursor = 'default';
+  } else {
+      drawing = false;
+      strokes.push(currentStroke);
+  }
 });
 canvas.addEventListener('mouseout', () => {
-  drawing = false;
-  eraseMode = false;
+  console.log("mouseout");
+    if (eraseMode) {
+    eraseMode = false;
+    canvas.style.cursor = 'default';
+  } else {
+      drawing = false;
+      strokes.push(currentStroke);
+  }
+
 });
 
 // The width and height ratios should be adjusted if there's a screen resize
@@ -178,7 +194,7 @@ paintbrush.addEventListener('click', () => {
 eraser.addEventListener('click', () => {
   erase = true;
   currentTool.style.marginLeft = '40px';
-
+  canvas.style.cursor = 'default';
 });
 
 let del = false;
