@@ -38,6 +38,7 @@ function regenerateCanvas() {
 		}
 
 		ctx.lineWidth = sizeSlider.value;
+		ctx.strokeStyle = currentColor;
 	});
 }
 function removeStrokeAt(xPos, yPos) {
