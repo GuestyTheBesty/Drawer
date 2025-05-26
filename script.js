@@ -9,7 +9,7 @@ ctx.lineCap = 'round';
 ctx.lineJoin = 'round'; 
 
 const strokes = [];
-let currentStroke = { width: ctx.lineWidth, coords: [] };
+let currentStroke = { width: ctx.lineWidth, color: ctx.strokeStyle, coords: [] };
 let curStrokeIndex = 0;
 
 let rect = canvas.getBoundingClientRect();
@@ -19,7 +19,7 @@ let drawing, erasing;
 
 const getCanvasXPos = (e) => (e.clientX - rect.left) * widthRatio;
 const getCanvasYPos = (e) => (e.clientY - rect.top) * heightRatio;
-function resetCurrentStroke() { currentStroke = { width: ctx.lineWidth, coords: [] }; }
+function resetCurrentStroke() { currentStroke = { width: ctx.lineWidth, color: ctx.strokeStyle, coords: [] }; }
 function regenerateCanvas() {
 	// If the drawing is large, requestAnimationFrame would make it look instant
 	requestAnimationFrame( function () {
@@ -29,6 +29,7 @@ function regenerateCanvas() {
 			if (coords.length === 0) continue;
 
 			ctx.lineWidth = strokes[i].width;
+			ctx.strokeStyle = strokes[i].color;
 			ctx.beginPath();
 			ctx.moveTo(coords[0].x, coords[0].y);
 			for (let k = 0; k < coords.length; k++)
@@ -50,10 +51,8 @@ function removeStrokeAt(xPos, yPos) {
 
 		for (let k = 0; k < coords.length - 1; k++) {
 			// Makes it more consistent (x1 is left, y1 is down, x is right, y2 is up)
-			const x1 = Math.min(coords[k].x, coords[k+1].x);
-			const y1 = Math.min(coords[k+1].y, coords[k+1].y);
-			const x2 = Math.max(coords[k].x, coords[k+1].x);
-			const y2 = Math.max(coords[k+1].y, coords[k+1].y);
+			const x1 = Math.min(coords[k].x, coords[k+1].x), y1 = Math.min(coords[k+1].y, coords[k+1].y),
+						x2 = Math.max(coords[k].x, coords[k+1].x), y2 = Math.max(coords[k+1].y, coords[k+1].y);
 
 			// If not in the general vicinity, return
 			if (!(x1 - width <= xPos && xPos <= x2 + width &&
@@ -65,6 +64,11 @@ function removeStrokeAt(xPos, yPos) {
 			if (y - width <= yPos && yPos <= y + width) return strokes.splice(i, 1);
 		}
 	}
+}
+function isWhitePixel(x, y) { // Forced to add "Pixel" at the end
+	const pixel = ctx.getImageData(x, y, 1, 1).data; // Get 1x1 pixel data
+	const [r, g, b, a] = pixel;
+	if (a === 0 || (r === 255 && g === 255 && b === 255)) return true;
 }
 
 let eraseMode = false;
@@ -101,10 +105,7 @@ canvas.addEventListener('mousemove', (e) => {
 		const x = getCanvasXPos(e);
 		const y = getCanvasYPos(e);
 
-		const pixel = ctx.getImageData(x, y, 1, 1).data; // Get 1x1 pixel data
-		const [r, g, b, a] = pixel;
-
-		if (a === 0 || (r === 255 && g === 255 && b === 255)) return; // If it's white, return
+		
 
 		// Returns undefined sometimes when calculations are very slightly off.
 		if (removeStrokeAt(x, y)) {
