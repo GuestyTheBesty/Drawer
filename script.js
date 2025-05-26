@@ -6,7 +6,7 @@ ctx.lineCap = 'round';
 ctx.lineJoin = 'round'; 
 
 const strokes = [];
-let currentStroke = []
+let currentStroke = {};
 let curStrokeIndex = 0;
 
 let rect = canvas.getBoundingClientRect();
@@ -16,94 +16,110 @@ let drawing, erasing;
 
 const getCanvasXPos = (e) => (e.clientX - rect.left) * widthRatio;
 const getCanvasYPos = (e) => (e.clientY - rect.top) * heightRatio;
+function resetCurrentStroke() { currentStroke = { width: ctx.lineWidth, coords: [] }; }
 function regenerateCanvas() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (let i = 0; i < strokes.length; i++) {
-	const coords = strokes[i].coords;
-	if (coords.length === 0) continue;
+	ctx.clearRect(0, 0, canvas.width, canvas.height);
+	for (let i = 0; i < strokes.length; i++) {
+		const coords = strokes[i].coords;
+		if (coords.length === 0) continue;
 
-	ctx.beginPath();
-	ctx.moveTo(coords[0].x, coords[0].y);
-	for (let k = 0; k < coords.length; k++)
-		ctx.lineTo(coords[k].x, coords[k].y);
-	ctx.stroke();
-  }
+		ctx.beginPath();
+		ctx.moveTo(coords[0].x, coords[0].y);
+		for (let k = 0; k < coords.length; k++)
+			ctx.lineTo(coords[k].x, coords[k].y);
+		ctx.stroke();
+	}
 }
-function getDistance(x1, y1, x2, y2) {
-	// Distance formula [I actually applied math??]
-	return Math.sqrt((x2 - x1)**2 + (y2-y1)**2);
-}
-function findStroke() {
+function findStroke(xPos, yPos) {
 	const strokeIndex = 0;
 
 	for (let i = strokes.length - 1; i >= 0; i--) {
-		const radius = strokes[i].lineWidth;
+		const width = strokes[i].width / 2;
 		const coords = strokes[i].coords;
-		for (let k = 0; k < coords.length; k++) {
-		  const x = coords[k].x;
-		  const y = coords[k].y;
+    
+		// It means there's a circle [Yoo I used distance formula]
+		if (coords.length === 1 &&
+			Math.sqrt((coords[0].x - xPos)**2 + (coords[0].y - yPos)**2) <= width
+		) return i;
 
-			
-		  let distance = getDistance(x, y, currentX, currentY);
+		for (let k = 0; k < coords.length - 1; k++) {
+		// Makes it more consistent (x1 is left, y1 is down, x is right, y2 is up)
+		const x1 = Math.min(coords[k].x, coords[k+1].x);
+		const y1 = Math.min(coords[k+1].y, coords[k+1].y);
+		const x2 = Math.max(coords[k].x, coords[k+1].x);
+		const y2 = Math.max(coords[k+1].y, coords[k+1].y);
 
-		  if (distance <= r) {
-			strokes.splice(i, 1);
-			regenerateCanvas();
-			return;
-		  } else {
+		// If not in the general vicinity, return
+		if (!(x1 - width <= xPos && xPos <= x2 + width &&
+				y1 - width <= yPos && yPos <= y2 + width)) return;
 
-		  }
+		// POINT SLOPE FORMULA IM SUCH A MATHEMATICAN
+		const slope = x2 - x1 === 0 ? 0 : (y2 - y1) / (x2 - x1);
+		const y = slope * (xPos - x1) + y1;
+		if (y - width <= yPos && yPos <= y + width) return i;
 		}
 	}
 
+	console.log("couldn't find");
 	return strokeIndex;
 }
 
 let eraseMode = false;
 // Drawing starts when you hold the mouse down
 canvas.addEventListener('mousedown', (e) => {
-  if (erase) {
-	eraseMode = true;
-	canvas.style.cursor = 'grabbing';
-  } else {
-	drawing = true;
-	const x = getCanvasXPos(e);
-	const y = getCanvasYPos(e);
+	if (e.button === 0) {
+			if (erase) {
+			eraseMode = true;
+			canvas.style.cursor = 'grabbing';
+		} else if (e.target === canvas) {
+			console.log("yes");
+			drawing = true;
+			const x = getCanvasXPos(e);
+			const y = getCanvasYPos(e);
 
-	ctx.beginPath();
-	ctx.moveTo(x, y);
-	ctx.lineTo(x, y);
-	ctx.stroke();
+			ctx.beginPath();
+			ctx.moveTo(x, y);
+			ctx.lineTo(x, y);
+			ctx.stroke();
 
-	currentStroke = {
-		lineWidth: ctx.lineWidth,
-		coords: [{x, y}]
-	};
-  }
+			resetCurrentStroke();
+			currentStroke.coords.push({x, y});
+		}
+	}
+
 });
 
+let deleted = false;
 // When you move the mouse around and drawing is true, it starts drawing
 canvas.addEventListener('mousemove', (e) => {
 	if (eraseMode) {
-	  const currentX = getCanvasXPos(e);
-	  const currentY = getCanvasYPos(e);
+		if (deleted) return;
+		console.log('checking');
+		const currentX = getCanvasXPos(e);
+		const currentY = getCanvasYPos(e);
 
-	  // Get 1x1 pixel data
-	  const pixel = ctx.getImageData(currentX, currentY, 1, 1).data;
-	  const [r, g, b, a] = pixel;
+		// Get 1x1 pixel data
+		const pixel = ctx.getImageData(currentX, currentY, 1, 1).data;
+		const [r, g, b, a] = pixel;
 
-	  // If it's white, return
-	  if (a === 0 || (r === 255 && g === 255 && b === 255)) return;
-
-	  
-		
-	  
+		// If it's white, return
+		if (a === 0 || (r === 255 && g === 255 && b === 255)) return;
+		deleted = true;
+		console.log(currentX, currentY);
+		console.log(strokes);
+		const index = findStroke(currentX, currentY);
+		console.log(index);
+		strokes.splice(index, 1);
+    requestAnimationFrame(regenerateCanvas);
+		setTimeout(() => {
+			deleted = false;
+		}, 500);
 	} else if (drawing) {
 	  const currentX = getCanvasXPos(e);
 	  const currentY = getCanvasYPos(e);
 	  currentStroke.coords.push({
-		x: currentX,
-		y: currentY
+		  x: currentX,
+		  y: currentY
 	  });
 
 	  ctx.lineTo(currentX, currentY);
@@ -113,29 +129,16 @@ canvas.addEventListener('mousemove', (e) => {
 
 // You're no longer drawing
 canvas.addEventListener('mouseup', () => {
+  
   if (eraseMode) {
 	eraseMode = false;
 	canvas.style.cursor = 'default';
   } else {
 	  drawing = false;
-	  strokes.push(currentStroke);
-	  console.log(currentStroke);
-	  ctx.strokeStyle = currentColor;
-	  
-	  console.log("bruh", currentStroke.coords.length);
-	  for (let i = 0; i < currentStroke.coords.length; i++) {
-		const point = currentStroke.coords[i];  // access each coordinate object
-	  
-		ctx.strokeStyle = "green";
-		ctx.fillStyle = 'blue';
-	  
-		ctx.beginPath();
-		ctx.arc(point.x, point.y, 10, 0, Math.PI * 2);  // use point.x and point.y
-		ctx.fill();
-	  }
-	  ctx.strokeStyle = currentColor;
+	  if (currentStroke.coords.length > 0) strokes.push(currentStroke);
 	  ctx.closePath();
   }
+	resetCurrentStroke();
 });
 canvas.addEventListener('mouseout', () => {
   console.log("mouseout");
@@ -144,8 +147,9 @@ canvas.addEventListener('mouseout', () => {
 	canvas.style.cursor = 'default';
   } else {
 	  drawing = false;
-	  strokes.push(currentStroke);
+	  if (currentStroke.coords.length > 0) strokes.push(currentStroke);
   }
+	resetCurrentStroke();
 });
 
 // The width and height ratios should be adjusted if there's a screen resize
@@ -222,6 +226,7 @@ let del = false;
 trash.addEventListener('click', () => {
 	
 	if (del) {
+		strokes.length = 0;
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		flipBackground();
 		return;
@@ -235,4 +240,16 @@ trash.addEventListener('click', () => {
 		trash.style.animation = 'none';
 		trash.offsetHeight;
 	}, 500);
+});
+
+// -------------------------------------------------- Revert/Return
+document.addEventListener("keydown", (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+    console.log(strokes.length, strokes);
+    e.preventDefault(); // optional: prevent browser's default undo
+    // Your custom undo logic here
+	} else if ((e.ctrlKey || e.metaKey) && e.key === "y") {
+		console.log("restore");
+		regenerateCanvas();
+	}
 });
