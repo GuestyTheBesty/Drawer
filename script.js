@@ -1,3 +1,6 @@
+// Prevents right click menu from appearing when right clicking
+document.addEventListener("contextmenu", (e) => e.preventDefault());
+
 // -------------------------------------------------- Canvas
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -6,7 +9,7 @@ ctx.lineCap = 'round';
 ctx.lineJoin = 'round'; 
 
 const strokes = [];
-let currentStroke = {};
+let currentStroke = { width: ctx.lineWidth, coords: [] };
 let curStrokeIndex = 0;
 
 let rect = canvas.getBoundingClientRect();
@@ -18,56 +21,55 @@ const getCanvasXPos = (e) => (e.clientX - rect.left) * widthRatio;
 const getCanvasYPos = (e) => (e.clientY - rect.top) * heightRatio;
 function resetCurrentStroke() { currentStroke = { width: ctx.lineWidth, coords: [] }; }
 function regenerateCanvas() {
-	ctx.clearRect(0, 0, canvas.width, canvas.height);
-	for (let i = 0; i < strokes.length; i++) {
-		const coords = strokes[i].coords;
-		if (coords.length === 0) continue;
+	// If the drawing is large, requestAnimationFrame would make it look instant
+	requestAnimationFrame( function () {
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		for (let i = 0; i < strokes.length; i++) {
+			const coords = strokes[i].coords;
+			if (coords.length === 0) continue;
 
-		ctx.beginPath();
-		ctx.moveTo(coords[0].x, coords[0].y);
-		for (let k = 0; k < coords.length; k++)
-			ctx.lineTo(coords[k].x, coords[k].y);
-		ctx.stroke();
-	}
+			ctx.lineWidth = strokes[i].width;
+			ctx.beginPath();
+			ctx.moveTo(coords[0].x, coords[0].y);
+			for (let k = 0; k < coords.length; k++)
+				ctx.lineTo(coords[k].x, coords[k].y);
+			ctx.stroke();
+		}
+
+		ctx.lineWidth = sizeSlider.value;
+	});
 }
-function findStroke(xPos, yPos) {
-	const strokeIndex = 0;
-
+function removeStrokeAt(xPos, yPos) {
 	for (let i = strokes.length - 1; i >= 0; i--) {
 		const width = strokes[i].width / 2;
 		const coords = strokes[i].coords;
     
 		// It means there's a circle [Yoo I used distance formula]
-		if (coords.length === 1 &&
-			Math.sqrt((coords[0].x - xPos)**2 + (coords[0].y - yPos)**2) <= width
-		) return i;
+		if (coords.length === 1 &&	Math.sqrt((coords[0].x - xPos)**2 + (coords[0].y - yPos)**2) <= width * 2) 
+			return strokes.splice(i, 1);
 
 		for (let k = 0; k < coords.length - 1; k++) {
-		// Makes it more consistent (x1 is left, y1 is down, x is right, y2 is up)
-		const x1 = Math.min(coords[k].x, coords[k+1].x);
-		const y1 = Math.min(coords[k+1].y, coords[k+1].y);
-		const x2 = Math.max(coords[k].x, coords[k+1].x);
-		const y2 = Math.max(coords[k+1].y, coords[k+1].y);
+			// Makes it more consistent (x1 is left, y1 is down, x is right, y2 is up)
+			const x1 = Math.min(coords[k].x, coords[k+1].x);
+			const y1 = Math.min(coords[k+1].y, coords[k+1].y);
+			const x2 = Math.max(coords[k].x, coords[k+1].x);
+			const y2 = Math.max(coords[k+1].y, coords[k+1].y);
 
-		// If not in the general vicinity, return
-		if (!(x1 - width <= xPos && xPos <= x2 + width &&
-				y1 - width <= yPos && yPos <= y2 + width)) return;
+			// If not in the general vicinity, return
+			if (!(x1 - width <= xPos && xPos <= x2 + width &&
+						y1 - width <= yPos && yPos <= y2 + width)) continue;
 
-		// POINT SLOPE FORMULA IM SUCH A MATHEMATICAN
-		const slope = x2 - x1 === 0 ? 0 : (y2 - y1) / (x2 - x1);
-		const y = slope * (xPos - x1) + y1;
-		if (y - width <= yPos && yPos <= y + width) return i;
+			// POINT SLOPE FORMULA IM SUCH A MATHEMATICAN
+			const slope = x2 - x1 === 0 ? 0 : (y2 - y1) / (x2 - x1);
+			const y = slope * (xPos - x1) + y1;
+			if (y - width <= yPos && yPos <= y + width) return strokes.splice(i, 1);
 		}
 	}
-
-	console.log("couldn't find");
-	return strokeIndex;
 }
 
 let eraseMode = false;
-// Drawing starts when you hold the mouse down
 canvas.addEventListener('mousedown', (e) => {
-	if (e.button === 0) {
+	if (e.button === 0) { // It's a left click
 			if (erase) {
 			eraseMode = true;
 			canvas.style.cursor = 'grabbing';
@@ -85,6 +87,8 @@ canvas.addEventListener('mousedown', (e) => {
 			resetCurrentStroke();
 			currentStroke.coords.push({x, y});
 		}
+	} else if (e.button === 2) { // It's a right click
+		console.log("right click");
 	}
 
 });
@@ -94,26 +98,22 @@ let deleted = false;
 canvas.addEventListener('mousemove', (e) => {
 	if (eraseMode) {
 		if (deleted) return;
-		console.log('checking');
-		const currentX = getCanvasXPos(e);
-		const currentY = getCanvasYPos(e);
+		const x = getCanvasXPos(e);
+		const y = getCanvasYPos(e);
 
-		// Get 1x1 pixel data
-		const pixel = ctx.getImageData(currentX, currentY, 1, 1).data;
+		const pixel = ctx.getImageData(x, y, 1, 1).data; // Get 1x1 pixel data
 		const [r, g, b, a] = pixel;
 
-		// If it's white, return
-		if (a === 0 || (r === 255 && g === 255 && b === 255)) return;
-		deleted = true;
-		console.log(currentX, currentY);
-		console.log(strokes);
-		const index = findStroke(currentX, currentY);
-		console.log(index);
-		strokes.splice(index, 1);
-    requestAnimationFrame(regenerateCanvas);
-		setTimeout(() => {
-			deleted = false;
-		}, 500);
+		if (a === 0 || (r === 255 && g === 255 && b === 255)) return; // If it's white, return
+
+		// Returns undefined sometimes when calculations are very slightly off.
+		if (removeStrokeAt(x, y)) {
+			deleted = true;
+			setTimeout(() => { deleted = false;	}, 150);
+			regenerateCanvas();
+		} 
+    
+		
 	} else if (drawing) {
 	  const currentX = getCanvasXPos(e);
 	  const currentY = getCanvasYPos(e);
@@ -136,7 +136,6 @@ canvas.addEventListener('mouseup', () => {
   } else {
 	  drawing = false;
 	  if (currentStroke.coords.length > 0) strokes.push(currentStroke);
-	  ctx.closePath();
   }
 	resetCurrentStroke();
 });
@@ -253,3 +252,4 @@ document.addEventListener("keydown", (e) => {
 		regenerateCanvas();
 	}
 });
+
