@@ -1,28 +1,39 @@
-// Prevents right click menu from appearing when right clicking
-document.addEventListener("contextmenu", (e) => e.preventDefault());
-
-// -------------------------------------------------- Canvas
+// -------------------------------------------------- Variable initializations
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
-ctx.lineWidth = 8;
-ctx.lineCap = 'round';
-ctx.lineJoin = 'round'; 
+
+const menu = document.getElementById('menu');
+const background = document.getElementById('background');
+const sizeSlider = document.getElementById('size-slider');
+
+const currentTool = document.getElementById('current-tool');
+const paintbrush = document.getElementById('paintbrush');
+const eraser = document.getElementById('eraser');
+const trash = document.getElementById('trash');
 
 const strokes = [];
 let currentStroke = { width: ctx.lineWidth, color: ctx.strokeStyle, coords: [] };
-let curStrokeIndex = 0;
+
+let mode = 'draw';
+let heldDown = false;
 
 let rect = canvas.getBoundingClientRect();
 let widthRatio = 1920 / rect.width;
 let heightRatio = 1080 / rect.height;
-let drawing, erasing;
 
+
+// -------------------------------------------------- Functions
+const flipBackground = () => background.hidden = !background.hidden;
 const getCanvasXPos = (e) => (e.clientX - rect.left) * widthRatio;
 const getCanvasYPos = (e) => (e.clientY - rect.top) * heightRatio;
-function resetCurrentStroke() { currentStroke = { width: ctx.lineWidth, color: ctx.strokeStyle, coords: [] }; }
+const resetCurrentStroke = () => currentStroke = { width: ctx.lineWidth, color: ctx.strokeStyle, coords: [] };
+
 function regenerateCanvas() {
 	// If the drawing is large, requestAnimationFrame would make it look instant
 	requestAnimationFrame( function () {
+		const originalWidth = ctx.lineWidth;
+		const originalColor = ctx.strokeStyle;
+
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		for (let i = 0; i < strokes.length; i++) {
 			const coords = strokes[i].coords;
@@ -37,10 +48,11 @@ function regenerateCanvas() {
 			ctx.stroke();
 		}
 
-		ctx.lineWidth = sizeSlider.value;
-		ctx.strokeStyle = currentColor;
+		ctx.lineWidth = originalWidth
+		ctx.strokeStyle = originalColor;
 	});
 }
+
 function removeStrokeAt(xPos, yPos) {
 	for (let i = strokes.length - 1; i >= 0; i--) {
 		const width = strokes[i].width / 2;
@@ -66,91 +78,95 @@ function removeStrokeAt(xPos, yPos) {
 		}
 	}
 }
+
 function isWhitePixel(x, y) { // Forced to add "Pixel" at the end
 	const pixel = ctx.getImageData(x, y, 1, 1).data; // Get 1x1 pixel data
 	const [r, g, b, a] = pixel;
 	if (a === 0 || (r === 255 && g === 255 && b === 255)) return true;
 }
 
-let eraseMode = false;
+
+// -------------------------------------------------- Canvas
+ctx.lineWidth = 8;
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
+
 canvas.addEventListener('mousedown', (e) => {
+	resetCurrentStroke();
 	if (e.button === 0) { // It's a left click
-			if (erase) {
-			eraseMode = true;
+		heldDown = true;
+		if (mode === 'erase') {
 			canvas.style.cursor = 'grabbing';
-		} else if (e.target === canvas) {
-			console.log("yes");
-			drawing = true;
+		} else if (mode === 'draw') {
 			const x = getCanvasXPos(e);
 			const y = getCanvasYPos(e);
+			currentStroke.coords.push({x, y});
 
 			ctx.beginPath();
 			ctx.moveTo(x, y);
 			ctx.lineTo(x, y);
 			ctx.stroke();
-
-			resetCurrentStroke();
-			currentStroke.coords.push({x, y});
 		}
-	} else if (e.button === 2) { // It's a right click
-		console.log("right click");
+	} else if (e.button === 2) { // If it's a right click, swap the modes
+		if (mode === 'draw') {
+			mode = 'erase';
+			currentTool.style.marginLeft = '40px';
+			canvas.style.cursor = 'default';
+		} else if (mode === 'erase') {
+			mode = 'draw';
+			currentTool.style.marginLeft = '0';
+			canvas.style.cursor = 'crosshair';
+		}
 	}
-
 });
 
 let deleted = false;
 // When you move the mouse around and drawing is true, it starts drawing
 canvas.addEventListener('mousemove', (e) => {
-	if (eraseMode) {
+	if (!heldDown) return;
+
+	if (mode === 'erase') {
 		if (deleted) return;
+
 		const x = getCanvasXPos(e);
 		const y = getCanvasYPos(e);
-
-		
+		if (isWhitePixel(x, y)) return;
 
 		// Returns undefined sometimes when calculations are very slightly off.
 		if (removeStrokeAt(x, y)) {
 			deleted = true;
-			setTimeout(() => { deleted = false;	}, 150);
+			setTimeout(() => { deleted = false;	}, 50);
 			regenerateCanvas();
 		} 
-    
-		
-	} else if (drawing) {
-	  const currentX = getCanvasXPos(e);
-	  const currentY = getCanvasYPos(e);
-	  currentStroke.coords.push({
-		  x: currentX,
-		  y: currentY
-	  });
+	} else if (mode === 'draw') {
+	  const x = getCanvasXPos(e);
+	  const y = getCanvasYPos(e);
+	  currentStroke.coords.push({x, y});
 
-	  ctx.lineTo(currentX, currentY);
+	  ctx.lineTo(x, y);
 	  ctx.stroke();
 	}
 });
 
 // You're no longer drawing
 canvas.addEventListener('mouseup', () => {
-  
-  if (eraseMode) {
-	eraseMode = false;
-	canvas.style.cursor = 'default';
-  } else {
-	  drawing = false;
+	heldDown = false;
+	console.log("mouseup");
+  if (mode === 'erase') {
+		canvas.style.cursor = 'default';
+  } else if (mode === 'draw') {
 	  if (currentStroke.coords.length > 0) strokes.push(currentStroke);
   }
-	resetCurrentStroke();
 });
+
 canvas.addEventListener('mouseout', () => {
-  console.log("mouseout");
-	if (eraseMode) {
-	eraseMode = false;
-	canvas.style.cursor = 'default';
-  } else {
-	  drawing = false;
+	heldDown = false;
+	if (mode === 'erase') {
+		canvas.style.cursor = 'default';
+  } else if (mode === 'draw') {
+		console.log('draw');
 	  if (currentStroke.coords.length > 0) strokes.push(currentStroke);
   }
-	resetCurrentStroke();
 });
 
 // The width and height ratios should be adjusted if there's a screen resize
@@ -160,84 +176,44 @@ window.addEventListener('resize', () => {
 	heightRatio = 1080 / rect.height;
 });
 
-let erase = false;
 
+// -------------------------------------------------- Menu
+menu.addEventListener('click', flipBackground);
+background.addEventListener('click', (e) => { if (e.target === background) flipBackground(); });
 
-// -------------------------------------------------- Menu/Colors
-const menu = document.getElementById('menu');
-const background = document.getElementById('background');
-const sizeSlider = document.getElementById('size-slider');
-let currentColor = `#000000ff`;
-
-const flipBackground = () => background.hidden = !background.hidden;
-
-// Dynamically change the slider size as you slide the thumb circle
 sizeSlider.addEventListener('input', () => {
+	// Dynamically change the slider size as you slide the thumb circle
 	sizeSlider.style.setProperty('--thumb-size', `${sizeSlider.value}px`);
 	ctx.lineWidth = sizeSlider.value;
 });
 
-// Turn on the background when menu is clicked
-menu.addEventListener('click', flipBackground);
-// Turn off the background when background is clicked
-background.addEventListener('click', (e) => { if (e.target === background) flipBackground(); });
-
-// Applies change when the user changes the color
-function changeColor(color) {
-	currentColor = color.hex;
-	if (erase) return;
-
-	sizeSlider.style.setProperty('--thumb-color', currentColor);
-	ctx.strokeStyle = currentColor;
-}
-
-// For the color picker
-const picker = new Picker({
-	parent: document.getElementById('color-picker'),
-	popup: false,
-	color: '#000000ff', 
-	onChange: changeColor
-});
-// Remove the inherit "Ok" button
-document.querySelector('.picker_done').style.display = 'none';
-
-
-// -------------------------------------------------- Menu/Tools
-const currentTool = document.getElementById('current-tool');
-const paintbrush = document.getElementById('paintbrush');
-const eraser = document.getElementById('eraser');
-const trash = document.getElementById('trash');
 
 paintbrush.addEventListener('click', () => {
-  erase = false;
+  mode = 'draw';
   currentTool.style.marginLeft = '0';
   canvas.style.cursor = 'crosshair';
-  const color = {hex: currentColor}
-  changeColor(color);
 });
 
-
 eraser.addEventListener('click', () => {
-  erase = true;
+  mode = 'erase';
   currentTool.style.marginLeft = '40px';
   canvas.style.cursor = 'default';
 });
 
-let del = false;
+let wipe = false;
 trash.addEventListener('click', () => {
-	
-	if (del) {
+	if (wipe) {
 		strokes.length = 0;
 		ctx.clearRect(0, 0, canvas.width, canvas.height);
 		flipBackground();
 		return;
 	}
 
-	del = true;
+	wipe = true;
 	trash.style.animation = 'shake 0.25s ease-in-out 2';
 
 	setTimeout(() => {
-		del = false 
+		wipe = false 
 		trash.style.animation = 'none';
 		trash.offsetHeight;
 	}, 500);
@@ -255,3 +231,21 @@ document.addEventListener("keydown", (e) => {
 	}
 });
 
+
+
+// -------------------------------------------------- Application adjustments
+// For the color picker [https://vanilla-picker.js.org/]
+const picker = new Picker({
+	parent: document.getElementById('color-picker'),
+	popup: false,
+	color: '#000000ff', 
+	onChange: function(color) {
+		sizeSlider.style.setProperty('--thumb-color', color.hex);
+		ctx.strokeStyle = color.hex
+	}
+});
+// Remove the inherit "Ok" button from the color picker
+document.querySelector('.picker_done').style.display = 'none';
+
+// Prevents right click menu from appearing when right clicking
+document.addEventListener("contextmenu", (e) => e.preventDefault());
