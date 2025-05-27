@@ -1,6 +1,9 @@
 // -------------------------------------------------- Variable initializations
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d', { willReadFrequently: true });
+ctx.lineWidth = 8;
+ctx.lineCap = 'round';
+ctx.lineJoin = 'round';
 
 const menu = document.getElementById('menu');
 const background = document.getElementById('background');
@@ -85,50 +88,10 @@ function isWhitePixel(x, y) { // Forced to add "Pixel" at the end
 	if (a === 0 || (r === 255 && g === 255 && b === 255)) return true;
 }
 
-
-// -------------------------------------------------- Canvas
-ctx.lineWidth = 8;
-ctx.lineCap = 'round';
-ctx.lineJoin = 'round';
-
-canvas.addEventListener('mousedown', (e) => {
-	if (e.button === 0) { // It's a left click
-		heldDown = true;
-		if (mode === 'erase') {
-			canvas.style.cursor = 'grabbing';
-		} else if (mode === 'draw') {
-			resetCurrentStroke();
-			
-			const x = getCanvasXPos(e);
-			const y = getCanvasYPos(e);
-			currentStroke.coords.push({x, y});
-
-			ctx.beginPath();
-			ctx.moveTo(x, y);
-			ctx.lineTo(x, y);
-			ctx.stroke();
-		}
-	} else if (e.button === 2) { // If it's a right click, swap the modes
-		if (mode === 'draw') {
-			mode = 'erase';
-			currentTool.style.marginLeft = '40px';
-			canvas.style.cursor = 'default';
-		} else if (mode === 'erase') {
-			mode = 'draw';
-			currentTool.style.marginLeft = '0';
-			canvas.style.cursor = 'crosshair';
-		}
-		regenerateCanvas();
-	}
-});
-
-canvas.addEventListener('touchstart', (e) => {
-	console.log('touchstart');
+function aboutToDrag(e) {
 	heldDown = true;
-	e = e.touches[0];
-	if (mode === 'erase') {
-		canvas.style.cursor = 'grabbing';
-	} else if (mode === 'draw') {
+	if (mode === 'erase') canvas.style.cursor = 'grabbing';
+	else if (mode === 'draw') {
 		resetCurrentStroke();
 		
 		const x = getCanvasXPos(e);
@@ -140,78 +103,68 @@ canvas.addEventListener('touchstart', (e) => {
 		ctx.lineTo(x, y);
 		ctx.stroke();
 	}
-})
+}
+
+function swapModes() {
+	if (mode === 'draw') {
+		mode = 'erase';
+		currentTool.style.marginLeft = '40px';
+		canvas.style.cursor = 'default';
+	} else if (mode === 'erase') {
+		mode = 'draw';
+		currentTool.style.marginLeft = '0';
+		canvas.style.cursor = 'crosshair';
+	}
+	regenerateCanvas();
+}
+
+function dragging(e) {
+	if (!heldDown) return;
+
+	if (mode === 'erase' && !deleted) {
+		const x = getCanvasXPos(e);
+		const y = getCanvasYPos(e);
+		if (isWhitePixel(x, y)) return;
+
+		// Returns undefined sometimes when calculations are very slightly off.
+		if (removeStrokeAt(x, y)) {
+			deleted = true;
+			setTimeout(() => { deleted = false;	}, 50); // There's a 50 ms cooldown between erases
+			regenerateCanvas();
+		} 
+	} else if (mode === 'draw') {
+		const x = getCanvasXPos(e);
+		const y = getCanvasYPos(e);
+		currentStroke.coords.push({x, y});
+
+		ctx.lineTo(x, y);
+		ctx.stroke();
+	}
+}
+
+function stopDragging(e) {
+	heldDown = false;
+	if (mode === 'erase') canvas.style.cursor = 'default';
+  else if (mode === 'draw' && currentStroke.coords.length > 0) strokes.push(currentStroke);
+	resetCurrentStroke();
+}
+
+
+// -------------------------------------------------- Canvas
+canvas.addEventListener('touchstart', (e) => aboutToDrag(e.touches[0]));
+canvas.addEventListener('mousedown', (e) => {
+	if (e.button === 0) aboutToDrag(e);
+	else if (e.button === 2) swapModes();
+});
+
 
 let deleted = false;
-// When you move the mouse around and drawing is true, it starts drawing
-canvas.addEventListener('mousemove', (e) => {
-	if (!heldDown) return;
+canvas.addEventListener('mousemove', dragging);
+canvas.addEventListener('touchmove', (e) => dragging(e.touches[0]));
 
-	if (mode === 'erase' && !deleted) {
-		const x = getCanvasXPos(e);
-		const y = getCanvasYPos(e);
-		if (isWhitePixel(x, y)) return;
-
-		// Returns undefined sometimes when calculations are very slightly off.
-		if (removeStrokeAt(x, y)) {
-			deleted = true;
-			setTimeout(() => { deleted = false;	}, 50); // There's a 50 ms cooldown between erases
-			regenerateCanvas();
-		} 
-	} else if (mode === 'draw') {
-	  const x = getCanvasXPos(e);
-	  const y = getCanvasYPos(e);
-	  currentStroke.coords.push({x, y});
-
-	  ctx.lineTo(x, y);
-	  ctx.stroke();
-	}
-});
-canvas.addEventListener('touchmove', (e) => {
-	if (!heldDown) return;
-	e = e.touches[0];
-
-	if (mode === 'erase' && !deleted) {
-		const x = getCanvasXPos(e);
-		const y = getCanvasYPos(e);
-		if (isWhitePixel(x, y)) return;
-
-		// Returns undefined sometimes when calculations are very slightly off.
-		if (removeStrokeAt(x, y)) {
-			deleted = true;
-			setTimeout(() => { deleted = false;	}, 50); // There's a 50 ms cooldown between erases
-			regenerateCanvas();
-		} 
-	} else if (mode === 'draw') {
-	  const x = getCanvasXPos(e);
-	  const y = getCanvasYPos(e);
-	  currentStroke.coords.push({x, y});
-
-	  ctx.lineTo(x, y);
-	  ctx.stroke();
-	}
-});
-
-// You're no longer drawing
-canvas.addEventListener('mouseup', () => {
-	heldDown = false;
-	if (mode === 'erase') canvas.style.cursor = 'default';
-  else if (mode === 'draw' && currentStroke.coords.length > 0) strokes.push(currentStroke);
-	resetCurrentStroke();
-});
-
-canvas.addEventListener('mouseout', () => {
-	heldDown = false;
-	if (mode === 'erase') canvas.style.cursor = 'default';
-  else if (mode === 'draw' && currentStroke.coords.length > 0) strokes.push(currentStroke);
-	resetCurrentStroke();
-});
-canvas.addEventListener('touchend', () => {
-	heldDown = false;
-	if (mode === 'erase') canvas.style.cursor = 'default';
-  else if (mode === 'draw' && currentStroke.coords.length > 0) strokes.push(currentStroke);
-	resetCurrentStroke();
-});
+canvas.addEventListener('mouseup', stopDragging);
+canvas.addEventListener('mouseout', stopDragging);
+canvas.addEventListener('touchend', stopDragging);
 
 // The width and height ratios should be adjusted if there's a screen resize
 window.addEventListener('resize', () => {
