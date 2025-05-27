@@ -92,12 +92,13 @@ ctx.lineCap = 'round';
 ctx.lineJoin = 'round';
 
 canvas.addEventListener('mousedown', (e) => {
-	resetCurrentStroke();
 	if (e.button === 0) { // It's a left click
 		heldDown = true;
 		if (mode === 'erase') {
 			canvas.style.cursor = 'grabbing';
 		} else if (mode === 'draw') {
+			resetCurrentStroke();
+			
 			const x = getCanvasXPos(e);
 			const y = getCanvasYPos(e);
 			currentStroke.coords.push({x, y});
@@ -117,6 +118,7 @@ canvas.addEventListener('mousedown', (e) => {
 			currentTool.style.marginLeft = '0';
 			canvas.style.cursor = 'crosshair';
 		}
+		regenerateCanvas();
 	}
 });
 
@@ -151,22 +153,16 @@ canvas.addEventListener('mousemove', (e) => {
 // You're no longer drawing
 canvas.addEventListener('mouseup', () => {
 	heldDown = false;
-	console.log("mouseup");
-  if (mode === 'erase') {
-		canvas.style.cursor = 'default';
-  } else if (mode === 'draw') {
-	  if (currentStroke.coords.length > 0) strokes.push(currentStroke);
-  }
+	if (mode === 'erase') canvas.style.cursor = 'default';
+  else if (mode === 'draw' && currentStroke.coords.length > 0) strokes.push(currentStroke);
+	resetCurrentStroke();
 });
 
 canvas.addEventListener('mouseout', () => {
 	heldDown = false;
-	if (mode === 'erase') {
-		canvas.style.cursor = 'default';
-  } else if (mode === 'draw') {
-		console.log('draw');
-	  if (currentStroke.coords.length > 0) strokes.push(currentStroke);
-  }
+	if (mode === 'erase') canvas.style.cursor = 'default';
+  else if (mode === 'draw' && currentStroke.coords.length > 0) strokes.push(currentStroke);
+	resetCurrentStroke();
 });
 
 // The width and height ratios should be adjusted if there's a screen resize
