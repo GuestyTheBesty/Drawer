@@ -112,16 +112,20 @@ function aboutToDrag(e) {
 	}
 }
 
+function drawingMode() {
+	mode = 'erase';
+	currentTool.style.marginLeft = '40px';
+	canvas.style.cursor = 'default';
+}
+function erasingMode() {
+	mode = 'draw';
+	currentTool.style.marginLeft = '0';
+	canvas.style.cursor = 'crosshair';
+}
+
 function swapModes() {
-	if (mode === 'draw') {
-		mode = 'erase';
-		currentTool.style.marginLeft = '40px';
-		canvas.style.cursor = 'default';
-	} else if (mode === 'erase') {
-		mode = 'draw';
-		currentTool.style.marginLeft = '0';
-		canvas.style.cursor = 'crosshair';
-	}
+	if (mode === 'draw') drawingMode();
+	else if (mode === 'erase') erasingMode();
 	regenerateCanvas(strokes);
 }
 
@@ -255,17 +259,8 @@ sizeSlider.addEventListener('input', () => {
 	ctx.lineWidth = sizeSlider.value;
 });
 
-paintbrush.addEventListener('click', () => {
-  mode = 'draw';
-  currentTool.style.marginLeft = '0';
-  canvas.style.cursor = 'crosshair';
-});
-
-eraser.addEventListener('click', () => {
-  mode = 'erase';
-  currentTool.style.marginLeft = '40px';
-  canvas.style.cursor = 'default';
-});
+paintbrush.addEventListener('click', drawingMode);
+eraser.addEventListener('click', erasingMode);
 
 let wipe = false;
 trash.addEventListener('click', () => {
@@ -285,7 +280,7 @@ trash.addEventListener('click', () => {
 	}, 500); // Safety mechanism: double click within 500 ms
 });
 
-// -------------------------------------------------- Revert/Return
+// -------------------------------------------------- Undo/Redo
 forward.addEventListener('click', redo);
 backward.addEventListener('click', undo);
 
