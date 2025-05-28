@@ -13,8 +13,12 @@ const currentTool = document.getElementById('current-tool');
 const paintbrush = document.getElementById('paintbrush');
 const eraser = document.getElementById('eraser');
 const trash = document.getElementById('trash');
+const forward = document.getElementById('forward');
+const backward = document.getElementById('backward');
 
 const strokes = [];
+const actions = new Array(20);
+let actionsIndex = -1;
 let currentStroke = { width: ctx.lineWidth, color: ctx.strokeStyle, coords: [] };
 
 let mode = 'draw';
@@ -31,7 +35,7 @@ const getCanvasXPos = (e) => (e.clientX - rect.left) * widthRatio;
 const getCanvasYPos = (e) => (e.clientY - rect.top) * heightRatio;
 const resetCurrentStroke = () => currentStroke = { width: ctx.lineWidth, color: ctx.strokeStyle, coords: [] };
 
-function regenerateCanvas() {
+function regenerateCanvas(strokes) {
 	// If the drawing is large, requestAnimationFrame would make it look instant
 	requestAnimationFrame( function () {
 		const originalWidth = ctx.lineWidth;
@@ -115,7 +119,7 @@ function swapModes() {
 		currentTool.style.marginLeft = '0';
 		canvas.style.cursor = 'crosshair';
 	}
-	regenerateCanvas();
+	regenerateCanvas(strokes);
 }
 
 function dragging(e) {
@@ -130,7 +134,7 @@ function dragging(e) {
 		if (removeStrokeAt(x, y)) {
 			deleted = true;
 			setTimeout(() => { deleted = false;	}, 50); // There's a 50 ms cooldown between erases
-			regenerateCanvas();
+			regenerateCanvas(strokes);
 		} 
 	} else if (mode === 'draw') {
 		const x = getCanvasXPos(e);
@@ -145,8 +149,28 @@ function dragging(e) {
 function stopDragging(e) {
 	heldDown = false;
 	if (mode === 'erase') canvas.style.cursor = 'default';
-  else if (mode === 'draw' && currentStroke.coords.length > 0) strokes.push(currentStroke);
+  else if (mode === 'draw' && currentStroke.coords.length > 0) {
+		strokes.push(currentStroke);
+		insertNewAction(strokes);
+  }
 	resetCurrentStroke();
+}
+
+function insertNewAction(strokes) {
+	actionsIndex++;
+	backward.style.opacity = '1';
+	backward.style.cursor = 'pointer';
+
+	console.log(actionsIndex);
+	if (0 <= actionsIndex && actionsIndex <= 19) {
+		actions[actionsIndex] = strokes;
+		
+		return;
+	}
+		
+
+	actions.shift();
+	actions.push(strokes);
 }
 
 
@@ -156,7 +180,6 @@ canvas.addEventListener('mousedown', (e) => {
 	if (e.button === 0) aboutToDrag(e);
 	else if (e.button === 2) swapModes();
 });
-
 
 let deleted = false;
 canvas.addEventListener('mousemove', dragging);
@@ -183,7 +206,6 @@ sizeSlider.addEventListener('input', () => {
 	sizeSlider.style.setProperty('--thumb-size', `${sizeSlider.value}px`);
 	ctx.lineWidth = sizeSlider.value;
 });
-
 
 paintbrush.addEventListener('click', () => {
   mode = 'draw';
@@ -218,17 +240,26 @@ trash.addEventListener('click', () => {
 });
 
 // -------------------------------------------------- Revert/Return
+forward.addEventListener('click', () => {
+
+});
+
+backward.addEventListener('click', () => {
+	console.log(actionsIndex);
+	let s = actions[--actionsIndex];
+	console.log(s);
+	regenerateCanvas(s);
+});
+
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "z") {
     console.log(strokes.length, strokes);
     e.preventDefault(); // optional: prevent browser's default undo
     // Your custom undo logic here
 	} else if ((e.ctrlKey || e.metaKey) && e.key === "y") {
-		console.log("restore");
-		regenerateCanvas();
+		console.log(actions);
 	}
 });
-
 
 
 // -------------------------------------------------- Application adjustments

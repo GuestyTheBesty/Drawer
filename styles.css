@@ -6,11 +6,26 @@ html, body {
 }
 
 #menu {
-    position: absolute;
-    margin: 10px;
+  position: absolute;
+  margin: 10px;
 }
-
 #menu:hover { cursor: pointer; }
+
+#forward {
+  position: absolute;
+  margin: 10px;
+  top: 48px;
+  opacity: .5;
+}
+#forward:hover { cursor: not-allowed; }
+
+#backward {
+  position: absolute;
+  margin: 10px;
+  top: 80px;
+  opacity: .5;
+}
+#backward:hover { cursor: not-allowed; }
 
 #background {
   position: absolute;
