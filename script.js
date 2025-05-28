@@ -13,12 +13,15 @@ const currentTool = document.getElementById('current-tool');
 const paintbrush = document.getElementById('paintbrush');
 const eraser = document.getElementById('eraser');
 const trash = document.getElementById('trash');
+
 const forward = document.getElementById('forward');
 const backward = document.getElementById('backward');
+let redo = false, undo = false;
 
 const strokes = [];
-const actions = new Array(20);
-let actionsIndex = -1;
+const actions = new Array(21);
+actions[0] = [];
+let actionsIndex = 0;
 let currentStroke = { width: ctx.lineWidth, color: ctx.strokeStyle, coords: [] };
 
 let mode = 'draw';
@@ -146,7 +149,7 @@ function dragging(e) {
 	}
 }
 
-function stopDragging(e) {
+function stopDragging() {
 	heldDown = false;
 	if (mode === 'erase') canvas.style.cursor = 'default';
   else if (mode === 'draw' && currentStroke.coords.length > 0) {
@@ -156,21 +159,41 @@ function stopDragging(e) {
 	resetCurrentStroke();
 }
 
-function insertNewAction(strokes) {
-	actionsIndex++;
+function enableFowards() {
+	forward.style.opacity = '1';
+	forward.style.cursor = 'pointer';
+	redo = true;
+}
+function disableForwards() {
+	forward.style.opacity = '.5';
+	forward.style.cursor = 'not-allowed';
+	redo = false;
+}
+
+function enableBackwards() {
 	backward.style.opacity = '1';
 	backward.style.cursor = 'pointer';
+	undo = true;
+}
+function disableBackwards() {
+	backward.style.opacity = '.5';
+	backward.style.cursor = 'not-allowed';
+	undo = false;
+}
 
-	console.log(actionsIndex);
-	if (0 <= actionsIndex && actionsIndex <= 19) {
-		actions[actionsIndex] = strokes;
-		
-		return;
+function insertNewAction(strokes) {
+	if (redo) {
+		for (let i = actionsIndex + 1; i < actions.length; i++)
+			actions[i] = undefined;
+		disableForwards();
 	}
-		
+	enableBackwards();
 
-	actions.shift();
-	actions.push(strokes);
+	const deepCopy = JSON.parse(JSON.stringify(strokes));
+	if (actionsIndex === actions.length - 1) {
+		actions.shift();
+		actions.push(deepCopy);
+	} else actions[++actionsIndex] = deepCopy;
 }
 
 
@@ -241,14 +264,27 @@ trash.addEventListener('click', () => {
 
 // -------------------------------------------------- Revert/Return
 forward.addEventListener('click', () => {
+	if (!redo) return;
+	enableBackwards();
 
+	actionsIndex++;
+	regenerateCanvas(actions[actionsIndex]);
+	strokes.length = 0;
+	strokes.push(...actions[actionsIndex]);
+	
+	if (!actions[actionsIndex+1]) disableForwards();
 });
 
 backward.addEventListener('click', () => {
-	console.log(actionsIndex);
-	let s = actions[--actionsIndex];
-	console.log(s);
-	regenerateCanvas(s);
+	if (!undo) return;
+	enableFowards();
+
+	actionsIndex--;
+	regenerateCanvas(actions[actionsIndex]);
+	strokes.length = 0;
+	strokes.push(...actions[actionsIndex]);
+
+	if (actionsIndex === 0) disableBackwards();
 });
 
 document.addEventListener("keydown", (e) => {
@@ -258,7 +294,7 @@ document.addEventListener("keydown", (e) => {
     // Your custom undo logic here
 	} else if ((e.ctrlKey || e.metaKey) && e.key === "y") {
 		console.log(actions);
-	}
+	} else if ((e.ctrlKey || e.metaKey) && e.key === "a") console.log(actionsIndex);
 });
 
 
