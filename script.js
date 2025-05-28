@@ -16,7 +16,7 @@ const trash = document.getElementById('trash');
 
 const forward = document.getElementById('forward');
 const backward = document.getElementById('backward');
-let redo = false, undo = false;
+let canRedo = false, canUndo = false;
 
 const strokes = [];
 const actions = new Array(21);
@@ -163,27 +163,27 @@ function stopDragging() {
 function enableFowards() {
 	forward.style.opacity = '1';
 	forward.style.cursor = 'pointer';
-	redo = true;
+	canRedo = true;
 }
 function disableForwards() {
 	forward.style.opacity = '.5';
 	forward.style.cursor = 'not-allowed';
-	redo = false;
+	canRedo = false;
 }
 
 function enableBackwards() {
 	backward.style.opacity = '1';
 	backward.style.cursor = 'pointer';
-	undo = true;
+	canUndo = true;
 }
 function disableBackwards() {
 	backward.style.opacity = '.5';
 	backward.style.cursor = 'not-allowed';
-	undo = false;
+	canUndo = false;
 }
 
 function insertNewAction(strokes) {
-	if (redo) {
+	if (canRedo) {
 		for (let i = actionsIndex + 1; i < actions.length; i++)
 			actions[i] = undefined;
 		disableForwards();
@@ -195,6 +195,30 @@ function insertNewAction(strokes) {
 		actions.shift();
 		actions.push(deepCopy);
 	} else actions[++actionsIndex] = deepCopy;
+}
+
+function redo() {
+	if (!canRedo) return;
+	enableBackwards();
+
+	actionsIndex++;
+	regenerateCanvas(actions[actionsIndex]);
+	strokes.length = 0;
+	strokes.push(...actions[actionsIndex]);
+	
+	if (!actions[actionsIndex+1]) disableForwards();
+}
+
+function undo() {
+	if (!canUndo) return;
+	enableFowards();
+
+	actionsIndex--;
+	regenerateCanvas(actions[actionsIndex]);
+	strokes.length = 0;
+	strokes.push(...actions[actionsIndex]);
+
+	if (actionsIndex === 0) disableBackwards();
 }
 
 
@@ -262,38 +286,18 @@ trash.addEventListener('click', () => {
 });
 
 // -------------------------------------------------- Revert/Return
-forward.addEventListener('click', () => {
-	if (!redo) return;
-	enableBackwards();
+forward.addEventListener('click', redo);
+backward.addEventListener('click', undo);
 
-	actionsIndex++;
-	regenerateCanvas(actions[actionsIndex]);
-	strokes.length = 0;
-	strokes.push(...actions[actionsIndex]);
-	
-	if (!actions[actionsIndex+1]) disableForwards();
-});
-
-backward.addEventListener('click', () => {
-	if (!undo) return;
-	enableFowards();
-
-	actionsIndex--;
-	regenerateCanvas(actions[actionsIndex]);
-	strokes.length = 0;
-	strokes.push(...actions[actionsIndex]);
-
-	if (actionsIndex === 0) disableBackwards();
-});
-
+// Key shortcuts for undoing/redoing
 document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "z") {
-    console.log(strokes.length, strokes);
-    e.preventDefault(); // optional: prevent browser's default undo
-    // Your custom undo logic here
+    e.preventDefault();
+		undo();
 	} else if ((e.ctrlKey || e.metaKey) && e.key === "y") {
-		console.log(actions);
-	} else if ((e.ctrlKey || e.metaKey) && e.key === "a") console.log(actionsIndex);
+		e.preventDefault();
+		redo();
+	}
 });
 
 
