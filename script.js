@@ -138,6 +138,7 @@ function dragging(e) {
 			deleted = true;
 			setTimeout(() => { deleted = false;	}, 50); // There's a 50 ms cooldown between erases
 			regenerateCanvas(strokes);
+			insertNewAction(strokes);
 		} 
 	} else if (mode === 'draw') {
 		const x = getCanvasXPos(e);
@@ -253,13 +254,11 @@ trash.addEventListener('click', () => {
 
 	wipe = true;
 	trash.style.animation = 'shake 0.25s ease-in-out 2';
-
-	// You have to double click within 500 ms as a safety mechanism in case of misclicks
 	setTimeout(() => {
 		wipe = false 
 		trash.style.animation = 'none';
 		trash.offsetHeight;
-	}, 500); 
+	}, 500); // Safety mechanism: double click within 500 ms
 });
 
 // -------------------------------------------------- Revert/Return

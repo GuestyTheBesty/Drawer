@@ -93,7 +93,6 @@ html, body {
 #eraser { margin-right: 10px; }
 #eraser:hover {cursor: pointer; }
 
-#trash { }
 #trash:hover { cursor: pointer; }
 
 #current-tool {
