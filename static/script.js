@@ -225,6 +225,17 @@ function undo() {
 	if (actionsIndex === 0) disableBackwards();
 }
 
+function resizeCanvas(canvas, newWidth, newHeight) {
+	const resizedCanvas = document.createElement('canvas');
+	resizedCanvas.width = newWidth;
+	resizedCanvas.height = newHeight;
+
+	const ctx = resizedCanvas.getContext('2d');
+	ctx.drawImage(canvas, 0, 0, newWidth, newHeight);
+
+	return resizedCanvas;
+}
+
 
 // -------------------------------------------------- Canvas
 canvas.addEventListener('touchstart', (e) => aboutToDrag(e.touches[0]));
@@ -293,6 +304,22 @@ document.addEventListener("keydown", (e) => {
 		e.preventDefault();
 		redo();
 	}
+});
+
+
+// -------------------------------------------------- Send canvas to backend
+document.getElementById('guess').addEventListener('click', () => {
+	const resizedCanvas = resizeCanvas(canvas, 384, 216);
+	resizedCanvas.toBlob(blob => {
+		fetch('/guess', {
+			method: 'POST',
+			headers: {'Content-Type': 'image/png'},
+			body: blob
+		})
+    .then(response => response.json())
+    .then(data => console.log('Server response:', data))
+    .catch(error => console.error('Error:', error));
+	});
 });
 
 
