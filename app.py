@@ -1,4 +1,5 @@
 from flask import Flask, redirect, render_template, request, jsonify
+import tensorflow as tf
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
