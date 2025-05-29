@@ -225,15 +225,52 @@ function undo() {
 	if (actionsIndex === 0) disableBackwards();
 }
 
-function resizeCanvas(canvas, newWidth, newHeight) {
-	const resizedCanvas = document.createElement('canvas');
-	resizedCanvas.width = newWidth;
-	resizedCanvas.height = newHeight;
+function cropCanvas(canvas) {
+  const width = canvas.width;
+  const height = canvas.height;
 
-	const ctx = resizedCanvas.getContext('2d');
-	ctx.drawImage(canvas, 0, 0, newWidth, newHeight);
+  // Get all pixel data from original canvas
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const data = imgData.data;
 
-	return resizedCanvas;
+  // Variables to find bounds of non-transparent pixels
+  let minX = width, minY = height, maxX = 0, maxY = 0;
+  let found = false;
+
+  // Loop through pixels, look for any pixel with alpha > 0 (non-transparent)
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const alpha = data[idx + 3];
+      if (alpha > 0) {
+        found = true;
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+
+  // If no non-transparent pixel found, return empty canvas
+  if (!found) {
+    return document.createElement('canvas');
+  }
+
+  // Calculate cropped width and height
+  const cropWidth = maxX - minX + 1;
+  const cropHeight = maxY - minY + 1;
+
+  // Create a new canvas for the cropped image
+  const croppedCanvas = document.createElement('canvas');
+  croppedCanvas.width = cropWidth;
+  croppedCanvas.height = cropHeight;
+  const croppedCtx = croppedCanvas.getContext('2d');
+
+  // Draw the cropped portion from original canvas onto the new canvas
+  croppedCtx.putImageData(ctx.getImageData(minX, minY, cropWidth, cropHeight), 0, 0);
+
+  return croppedCanvas;
 }
 
 
@@ -309,8 +346,7 @@ document.addEventListener("keydown", (e) => {
 
 // -------------------------------------------------- Send canvas to backend
 document.getElementById('guess').addEventListener('click', () => {
-	const resizedCanvas = resizeCanvas(canvas, 384, 216);
-	resizedCanvas.toBlob(blob => {
+	cropCanvas(canvas).toBlob(blob => {
 		fetch('/guess', {
 			method: 'POST',
 			headers: {'Content-Type': 'image/png'},
