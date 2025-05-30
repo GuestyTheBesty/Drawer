@@ -339,7 +339,7 @@ guess.addEventListener('click', () => {
 
 		setTimeout(() => {
 			message = false;
-			guess.style.backgroundColor = 'blue';
+			guess.style.backgroundColor = '#0d6efd';
 			guess.style.cursor = 'pointer';
 			guess.innerText = 'Guess';
 		}, 1000)
@@ -364,7 +364,7 @@ guess.addEventListener('click', () => {
 
 	setTimeout(() => {
 		message = false;
-		guess.style.backgroundColor = 'blue';
+		guess.style.backgroundColor = '#0d6efd';
 		guess.style.cursor = 'pointer';
 		guess.innerText = 'Guess';
 	}, 2000)
