@@ -18,6 +18,8 @@ const forward = document.getElementById('forward');
 const backward = document.getElementById('backward');
 let canRedo = false, canUndo = false;
 
+const guess = document.getElementById('guess');
+
 const strokes = [];
 const actions = new Array(21);
 actions[0] = [];
@@ -226,51 +228,31 @@ function undo() {
 }
 
 function cropCanvas(canvas) {
-  const width = canvas.width;
-  const height = canvas.height;
+	let x1 = 1920, y1 = 0, x2 = 0, y2 = 1080, r = 0;
 
-  // Get all pixel data from original canvas
-  const imgData = ctx.getImageData(0, 0, width, height);
-  const data = imgData.data;
+	for (let i = 0; i < strokes.length; i++) {
+		const coords = strokes[i].coords;
+		r = Math.max(r, strokes[i].width / 2);
+		for (let k = 0; k < coords.length; k++) {
+			const x = coords[k].x, y = coords[k].y;
+			x1 = Math.min(x1, x), x2 = Math.max(x2, x);
+			y1 = Math.max(y1, y), y2 = Math.min(y2, y);
+		}
+	}
+	
+	const croppedCanvas = document.createElement('canvas');
+	const width = x2 - x1, height = y1 - y2;
+	croppedCanvas.width = width;
+	croppedCanvas.height = height;
 
-  // Variables to find bounds of non-transparent pixels
-  let minX = width, minY = height, maxX = 0, maxY = 0;
-  let found = false;
+	croppedCanvas.getContext('2d').drawImage(
+		canvas, 
+		x1-r, y2-r, // -r to shift r units to the top and left
+		width+r*2, height+r*2, // +r*2 to shift r units to the bottom and right and make up for the previous shift
+		0, 0, width, height
+	);
 
-  // Loop through pixels, look for any pixel with alpha > 0 (non-transparent)
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const idx = (y * width + x) * 4;
-      const alpha = data[idx + 3];
-      if (alpha > 0) {
-        found = true;
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
-    }
-  }
-
-  // If no non-transparent pixel found, return empty canvas
-  if (!found) {
-    return document.createElement('canvas');
-  }
-
-  // Calculate cropped width and height
-  const cropWidth = maxX - minX + 1;
-  const cropHeight = maxY - minY + 1;
-
-  // Create a new canvas for the cropped image
-  const croppedCanvas = document.createElement('canvas');
-  croppedCanvas.width = cropWidth;
-  croppedCanvas.height = cropHeight;
-  const croppedCtx = croppedCanvas.getContext('2d');
-
-  // Draw the cropped portion from original canvas onto the new canvas
-  croppedCtx.putImageData(ctx.getImageData(minX, minY, cropWidth, cropHeight), 0, 0);
-
-  return croppedCanvas;
+	return croppedCanvas;
 }
 
 
@@ -345,7 +327,25 @@ document.addEventListener("keydown", (e) => {
 
 
 // -------------------------------------------------- Send canvas to backend
-document.getElementById('guess').addEventListener('click', () => {
+let message = false;
+guess.addEventListener('click', () => {
+	if (message) return;
+
+	if (strokes.length === 0) {
+		message = true;
+		guess.style.backgroundColor = 'red';
+		guess.style.cursor = 'not-allowed';
+		guess.innerText = 'Draw something!';
+
+		setTimeout(() => {
+			message = false;
+			guess.style.backgroundColor = 'blue';
+			guess.style.cursor = 'pointer';
+			guess.innerText = 'Guess';
+		}, 1000)
+		return;
+	}
+
 	cropCanvas(canvas).toBlob(blob => {
 		fetch('/guess', {
 			method: 'POST',
@@ -356,6 +356,19 @@ document.getElementById('guess').addEventListener('click', () => {
     .then(data => console.log('Server response:', data))
     .catch(error => console.error('Error:', error));
 	});
+
+	message = true;
+	guess.style.backgroundColor = 'green';
+	guess.style.cursor = 'not-allowed';
+	guess.innerText = 'Processsing...';
+
+	setTimeout(() => {
+		message = false;
+		guess.style.backgroundColor = 'blue';
+		guess.style.cursor = 'pointer';
+		guess.innerText = 'Guess';
+	}, 2000)
+	return;
 });
 
 
