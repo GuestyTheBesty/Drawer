@@ -241,7 +241,8 @@ function cropCanvas(canvas) {
 	}
 	
 	const croppedCanvas = document.createElement('canvas');
-	const width = x2 - x1, height = y1 - y2;
+	let width = x2 - x1, height = y1 - y2;
+	if (width < 120) width = 120;
 	croppedCanvas.width = width;
 	croppedCanvas.height = height;
 
@@ -252,7 +253,16 @@ function cropCanvas(canvas) {
 		0, 0, width, height
 	);
 
-	return croppedCanvas;
+	const actual = document.createElement('canvas');
+	actual.width = width * 1.5;
+	actual.height = height * 1.5;
+
+	actual.getContext('2d').drawImage(
+		croppedCanvas,
+		width*.25, height*.25
+	)
+
+	return actual;
 }
 
 
