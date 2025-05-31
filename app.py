@@ -15,7 +15,7 @@ def home():
 @app.route("/guess", methods=["POST"])
 def guess():
     blob = request.data
-    if not blob: return jsonify({'error': 'No image data received'}), 400
+    if not blob: return jsonify({'error': 'No blob'}), 400
     
     image = Image.open(io.BytesIO(blob))
     
@@ -23,38 +23,29 @@ def guess():
     background = Image.new("RGBA", image.size, (255, 255, 255, 255))
     image = Image.alpha_composite(background, image).convert("L")
 
-    # MNIST training data has black background
-    image = image.resize((28, 28), Image.LANCZOS) # AI is trained on 28x28 images
-    image = ImageOps.invert(image)
+    
+    image = image.resize((28, 28), Image.BILINEAR) # AI is trained on 28x28 images
+    image = ImageOps.invert(image) # MNIST training data has black background
 
-    pixels = image.load()  # Access pixel data
-
+    # Convert all non-black pixels to compeltely white
+    pixels = image.load()
     for y in range(image.height):
         for x in range(image.width):
             current_pixel = pixels[x, y]
-            if current_pixel > 0:  # Not black
-                # Brighten pixel, for example by 30% (max 255)
+            if current_pixel > 0:
                 pixels[x, y] = 255
+    
+    image.save("bilinear.png")
 
     # Convert image to a readable array by the model
     image_array = np.array(image)
     image_array = image_array.astype('float32') / 255.0
     image_array = image_array.reshape(1, 28, 28, 1)
     
-    predictions = model.predict(image_array)[0]
-    highest = 0
-    num = 0
-    for i, prediction in enumerate(predictions):
-        if prediction > highest: 
-            highest = prediction
-            num = i
-        print(i, prediction)
-    
-    print("It is ", num, " with ", f"{highest*100}.2f", "% probability", sep="")
+    prediction = model.predict(image_array)[0]
+    prediction = [float(probability) for probability in prediction]
 
-    image.save("lanczos.png")
-
-    return jsonify({'message': 'Image received successfully'})
+    return jsonify({'prediction':  prediction})
 
 
 if __name__ == "__main__":

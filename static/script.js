@@ -115,19 +115,19 @@ function aboutToDrag(e) {
 }
 
 function drawingMode() {
-	mode = 'erase';
-	currentTool.style.marginLeft = '40px';
-	canvas.style.cursor = 'default';
-}
-function erasingMode() {
 	mode = 'draw';
 	currentTool.style.marginLeft = '0';
 	canvas.style.cursor = 'crosshair';
 }
+function erasingMode() {
+	mode = 'erase';
+	currentTool.style.marginLeft = '40px';
+	canvas.style.cursor = 'default';
+}
 
 function swapModes() {
-	if (mode === 'draw') drawingMode();
-	else if (mode === 'erase') erasingMode();
+	if (mode === 'draw') erasingMode();
+	else if (mode === 'erase') drawingMode();
 	regenerateCanvas(strokes);
 }
 
@@ -363,7 +363,19 @@ guess.addEventListener('click', () => {
 			body: blob
 		})
     .then(response => response.json())
-    .then(data => console.log('Server response:', data))
+    .then((data) => {
+			const arr = data.prediction.map((value, index) => ({ value, index }));
+			arr.sort((a, b) => b.value - a.value);
+			const sortedArr = arr.map(item => [item.index, (item.value*100.0).toFixed(4)]);
+
+			let text = '';
+			for (let i = 0; i < sortedArr.length; i++) {
+				text += sortedArr[i][1] + "% it is " + sortedArr[i][0];
+				if (i != sortedArr.length - 1) text += "\n";
+			}
+
+			setTimeout(() => alert(text), 500);
+		})
     .catch(error => console.error('Error:', error));
 	});
 
@@ -377,7 +389,7 @@ guess.addEventListener('click', () => {
 		guess.style.backgroundColor = '#0d6efd';
 		guess.style.cursor = 'pointer';
 		guess.innerText = 'Guess';
-	}, 2000)
+	}, 500)
 	return;
 });
 
