@@ -394,7 +394,7 @@ guess.addEventListener('click', () => {
 					<button onclick="expandResult(expanded)" class="btn btn-secondary btn-sm">Expand</button>
 				`;
 				
-				setTimeout(() => result.innerHTML = ``, 5000);
+				setTimeout(() => result.innerHTML = ``, 2000);
 			}, 500);
 		})
     .catch(error => console.error('Error:', error));
