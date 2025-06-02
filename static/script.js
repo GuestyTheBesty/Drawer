@@ -7,8 +7,12 @@ ctx.lineJoin = 'round';
 
 const menu = document.getElementById('menu');
 const background = document.getElementById('background');
-const sizeSlider = document.getElementById('size-slider');
+const center = document.getElementById('center');
+const center2 = document.getElementById('center2');
+const result = document.getElementById('result');
+let expanded = '';
 
+const sizeSlider = document.getElementById('size-slider');
 const currentTool = document.getElementById('current-tool');
 const paintbrush = document.getElementById('paintbrush');
 const eraser = document.getElementById('eraser');
@@ -35,7 +39,11 @@ let heightRatio = 1080 / rect.height;
 
 
 // -------------------------------------------------- Functions
-const flipBackground = () => background.hidden = !background.hidden;
+const flipBackground = () => {
+	background.hidden = !background.hidden
+	center.hidden = false;
+	center2.hidden = true;
+};
 const getCanvasXPos = (e) => (e.clientX - rect.left) * widthRatio;
 const getCanvasYPos = (e) => (e.clientY - rect.top) * heightRatio;
 const resetCurrentStroke = () => currentStroke = { width: ctx.lineWidth, color: ctx.strokeStyle, coords: [] };
@@ -265,6 +273,13 @@ function cropCanvas(canvas) {
 	return actual;
 }
 
+function expandResult() {
+	background.hidden = false;
+	center.hidden = true;
+	center2.hidden = false;
+	console.log(expanded);
+	center2.innerText = `${expanded}`;
+}
 
 // -------------------------------------------------- Canvas
 canvas.addEventListener('touchstart', (e) => aboutToDrag(e.touches[0]));
@@ -368,13 +383,19 @@ guess.addEventListener('click', () => {
 			arr.sort((a, b) => b.value - a.value);
 			const sortedArr = arr.map(item => [item.index, (item.value*100.0).toFixed(4)]);
 
-			let text = '';
+			expanded = '';
 			for (let i = 0; i < sortedArr.length; i++) {
-				text += sortedArr[i][1] + "% it is " + sortedArr[i][0];
-				if (i != sortedArr.length - 1) text += "\n";
+				expanded += sortedArr[i][1] + "% it is " + sortedArr[i][0];
+				if (i != sortedArr.length - 1) expanded += "\n";
 			}
-
-			setTimeout(() => alert(text), 500);
+			setTimeout(() => {
+				result.innerHTML = `
+					Is it a ${sortedArr[0][0]}?
+					<button onclick="expandResult(expanded)" class="btn btn-secondary btn-sm">Expand</button>
+				`;
+				
+				setTimeout(() => result.innerHTML = ``, 5000);
+			}, 500);
 		})
     .catch(error => console.error('Error:', error));
 	});
